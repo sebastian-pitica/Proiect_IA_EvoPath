@@ -1,103 +1,101 @@
+# /**************************************************************************
+#
+#  File:        seba.py
+#  Copyright:   (c) 2023 EvoPath Team
+#  Description:
+#  Designed by: Sebastian Pitica
+#
+#  Module-History:
+#  Date        Author                Reason
+#  24.11.2023  Sebastian Pitica      Basic structure and Wilson algorithm for maze gen (improved version from https://github.com/antigones/pymazes/blob/main/wilson.py)
+#
+#  **************************************************************************/
+
 import numpy as np
 import random as rd
 
+NORTH = 1
+EAST = 2
+SOUTH = 3
+WEST = 4
+NULL_DIRECTION = 0
+PATH = ' '
+WALL = '#'
+VISITED = 1
+STEP = 1
 
-def wilson(grid: np.ndarray, size: int) -> np.ndarray:
-    output_grid = np.full([2 * size + 1, 2 * size + 1], '#', dtype=str)
-    c = size * size  # number of cells to be visited
 
-    # choose random cell
-    i = rd.randrange(size)
-    j = rd.randrange(size)
-    grid[i, j] = 1
+def wilson(size: int) -> np.ndarray:
+    np.random.seed(42)
+    matrix = np.zeros(shape=(size, size))
+    MIN_COORD = 0
+    MAX_COORD = size - 1
+    maze = np.full([2 * size + 1, 2 * size + 1], WALL, dtype=str)
+    cell_number = size * size
 
-    visited = [[i, j]]
-    visited_from = [0]
+    i_coord = rd.randrange(size)
+    j_coord = rd.randrange(size)
+    matrix[i_coord, j_coord] = 1
+    visited = [[i_coord, j_coord]]
+    visited_from = [NULL_DIRECTION]
 
-    while np.count_nonzero(grid) < c:
-
-        if grid[i, j] == 1:
-            # already visited, close the loop (carve + empty visited)
-            for i in range(len(visited)):
-                ve = visited[i]
-                vi = ve[0]
-                vj = ve[1]
-                grid[vi, vj] = 1
-                w = 2 * vi + 1
-                k = 2 * vj + 1
-                output_grid[w, k] = ' '
-
-                vf = visited_from[i]
-
-                if vf == 1:
-                    output_grid[w - 1, k] = ' '
-                elif vf == 2:
-                    output_grid[w, k + 1] = ' '
-                elif vf == 3:
-                    output_grid[w + 1, k] = ' '
-                elif vf == 4:
-                    output_grid[w, k - 1] = ' '
+    while np.count_nonzero(matrix) < cell_number:
+        if matrix[i_coord, j_coord] == VISITED:
+            for i_coord in range(len(visited)):
+                visited_i, visited_j = visited[i_coord]
+                matrix[visited_i, visited_j] = VISITED
+                maze_i = 2 * visited_i + 1
+                maze_j = 2 * visited_j + 1
+                maze[maze_i, maze_j] = PATH
+                visited_from_direction = visited_from[i_coord]
+                if visited_from_direction == NULL_DIRECTION:
+                    continue
+                if visited_from_direction == NORTH:
+                    maze[maze_i - 1, maze_j] = PATH
+                elif visited_from_direction == EAST:
+                    maze[maze_i, maze_j + 1] = PATH
+                elif visited_from_direction == SOUTH:
+                    maze[maze_i + 1, maze_j] = PATH
+                elif visited_from_direction == WEST:
+                    maze[maze_i, maze_j - 1] = PATH
 
             visited.clear()
             visited_from.clear()
-            i = rd.randrange(size)
-            j = rd.randrange(size)
-            visited.append([i, j])
-            visited_from.append(0)
+            i_coord = rd.randrange(size)
+            j_coord = rd.randrange(size)
+            visited.append([i_coord, j_coord])
+            visited_from.append(NULL_DIRECTION)
 
         else:
-            if [i, j] in visited:
+            if [i_coord, j_coord] in visited:
                 visited.clear()
                 visited_from.clear()
 
-            visited.append([i, j])
+            visited.append([i_coord, j_coord])
+            can_go = [i_coord > MIN_COORD, j_coord < MAX_COORD, i_coord < MAX_COORD, j_coord > MIN_COORD]
+            neighbour_direction = np.random.choice(np.nonzero(can_go)[0]) + 1
+            visited_from.append(neighbour_direction)
+            if neighbour_direction == NORTH:
+                i_coord -= STEP
+            elif neighbour_direction == EAST:
+                j_coord += STEP
+            elif neighbour_direction == SOUTH:
+                i_coord += STEP
+            elif neighbour_direction == WEST:
+                j_coord -= STEP
 
-            can_go = [1, 1, 1, 1]
+    start_i_coord = 2 * rd.randrange(size) + 1
+    star_j_coord = MIN_COORD
+    finish_i_coord = 2 * rd.randrange(size) + 1
+    finish_j_coord = 2 * MAX_COORD + 2
 
-            if i == 0:
-                can_go[0] = 0
-            if i == size - 1:
-                can_go[2] = 0
-            if j == 0:
-                can_go[3] = 0
-            if j == size - 1:
-                can_go[1] = 0
+    while maze[start_i_coord, star_j_coord + 1] != PATH:
+        start_i_coord = 2 * rd.randrange(size) + 1
 
-            neighbour_idx = np.random.choice(np.nonzero(can_go)[0])  # n,e,s,w
+    while maze[finish_i_coord, finish_j_coord - 1] != PATH:
+        finish_i_coord = 2 * rd.randrange(size) + 1
 
-            if neighbour_idx == 0:
-                visited_from.append(1)
-                i -= 1
-            elif neighbour_idx == 1:
-                visited_from.append(2)
-                j += 1
-            elif neighbour_idx == 2:
-                visited_from.append(3)
-                i += 1
-            elif neighbour_idx == 3:
-                visited_from.append(4)
-                j -= 1
+    maze[start_i_coord, star_j_coord] = PATH
+    maze[finish_i_coord, finish_j_coord] = PATH
 
-    return output_grid
-
-
-size = 100
-
-np.random.seed(42)
-grid = np.zeros(shape=(size, size))
-
-console_grid = wilson(grid, size)
-
-
-def convert_maze(output_grid):
-    maze_list = []
-    for row in output_grid:
-        maze_row = ['+' if cell == '#' else ' ' for cell in row]
-        maze_list.append(maze_row)
-    return maze_list
-
-
-converted_maze = convert_maze(console_grid)
-
-for elm in converted_maze:
-    print(str(elm).replace(',', '').replace('[', '').replace(']', '').replace('\'', ''))
+    return maze
