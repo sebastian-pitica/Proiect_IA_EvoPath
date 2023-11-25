@@ -12,16 +12,26 @@
 #  **************************************************************************/
 
 import random
+from seba import PATH, WALL
 
 DREAPTA = "dreapta"
 STANGA = "stanga"
 SUS = "sus"
 JOS = "jos"
-NIMIC = " "
-CEVA = "+"
-#import path wall de la seba care e gol si ocupat
+DEBLOCARE = "deblocare"
 
-# stringurile: "plus"=perete, "nimic"=nu e nimic(liber)
+DIRECTII = [DREAPTA, STANGA, SUS, JOS]
+
+LIMITA_SUPERIOARA_UNGHI_DREAPTA = 45
+LIMITA_INFERIOARA_UNGHI_DREAPTA = 315
+LIMITA_SUPERIOARA_UNGHI_STANGA = 225
+LIMITA_INFERIOARA_UNGHI_STANGA = 135
+LIMITA_SUPERIOARA_UNGHI_SUS = 135
+LIMITA_INFERIOARA_UNGHI_SUS = 45
+LIMITA_SUPERIOARA_UNGHI_JOS = 315
+LIMITA_INFERIOARA_UNGHI_JOS = 225
+
+
 def gen_rand_angle():
     return random.uniform(0, 360)
 
@@ -30,67 +40,150 @@ def gen_nr_genes(dim_labirint):
     return random.randint(2 * dim_labirint, dim_labirint * dim_labirint)
 
 
-def det_directie(angle):
-    if angle < 45 or angle > 315:
-        return "dreapta"  # dreapta
-    elif 45 < angle < 135:
-        return "sus"  # sus
-    elif 135 < angle < 225:
-        return "stanga"  # stanga
-    elif 225 < angle < 315:
-        return "jos"  # jos
-
-#LIMITA_UNGHI_DREAPTA
-
-def det_new_coord(curr_coord, directie, dim_labirint):
-    """COORDONATELE SUNT REPREZENTATE DE LINII SI COLOANE Y=LINIA, X=COLOANA"""
-    row, col = curr_coord
-
-    if (directie == "dreapta") and (maze[row][col + 1] == " "):
-        if col + 1 == dim_labirint:
-            print("S-a ajuns la final")
-        col += 1
-    elif (directie == "stanga") and (col - 1 >= 0) and (
-            maze[row][col - 1] == " "):  # daca pleaca doar din stanga si face stanga nu inainteaza
-        col -= 1
-    elif (directie == "sus") and (maze[row - 1][col] == " "):
-        row -= 1
-    elif (directie == "jos") and (maze[row + 1][col] == " "):
-        row += 1
-    return row, col
-
-
-def gen_individ(nr_genes,start_coord, dim_labirint):
+def gen_individ(nr_genes):
     individ = []
-    coord = start_coord
-    individ.append(coord)
-
     for i in range(0, nr_genes):
-        directie = det_directie(gen_rand_angle())
-        coord = det_new_coord(coord, directie, dim_labirint)
-        individ.append(coord)
-
+        individ.append(gen_rand_angle())
     return individ
 
 
-def gen_population(nr_genes,nr_indivizi, start_coord, dim_labirint):
-    pop = []
+def gen_population(nr_genes, nr_indivizi):
+    population = []
     for i in range(0, nr_indivizi):
-        pop.append(gen_individ(nr_genes,start_coord, dim_labirint))
-    return pop
+        population.append(gen_individ(nr_genes))
+    return population
 
 
-maze = [["+", "+", "+", "+", "+", "+", "+", "+", "+", "+"],
-        ["+", " ", " ", " ", "+", " ", "+", " ", " ", " "],
-        ["+", "+", "+", " ", " ", " ", "+", " ", "+", "+"],
-        [" ", " ", "+", "+", " ", "+", "+", " ", "+", "+"],
-        ["+", " ", " ", "+", " ", "+", " ", " ", " ", "+"],
-        ["+", "+", " ", "+", " ", " ", " ", "+", "+", "+"],
-        ["+", " ", " ", "+", " ", "+", "+", "+", " ", "+"],
-        ["+", "+", " ", " ", " ", " ", "+", " ", " ", "+"],
-        ["+", " ", " ", "+", "+", " ", " ", " ", "+", "+"],
-        ["+", "+", "+", "+", "+", "+", "+", "+", "+", "+"]]
+def det_directie(angle):
+    if angle > LIMITA_INFERIOARA_UNGHI_DREAPTA or angle < LIMITA_SUPERIOARA_UNGHI_DREAPTA:
+        return DREAPTA
+    elif LIMITA_INFERIOARA_UNGHI_SUS < angle < LIMITA_SUPERIOARA_UNGHI_SUS:
+        return SUS
+    elif LIMITA_INFERIOARA_UNGHI_STANGA < angle < LIMITA_SUPERIOARA_UNGHI_STANGA:
+        return STANGA
+    elif LIMITA_INFERIOARA_UNGHI_JOS < angle < LIMITA_SUPERIOARA_UNGHI_JOS:
+        return JOS
 
-popul = gen_population(gen_nr_genes(len(maze)),2, (3, 0), len(maze))
-for ind in popul:
-    print(ind)
+
+#
+# def det_new_coord(curr_coord, gena, dim_labirint):
+#     directie = det_directie(gena)
+#     """COORDONATELE SUNT REPREZENTATE DE LINII SI COLOANE Y=LINIA, X=COLOANA"""
+#     row, col = curr_coord
+#     # TODO AICI BLOCAJE
+#     if (directie == DREAPTA) and (maze[row][col + 1] == PATH):
+#         if col + 1 == dim_labirint:
+#             print("S-a ajuns la final")  # se activeaza un flag care copie coordonata pt restu genelor
+#         col += 1
+#     elif (directie == STANGA) and (col - 1 >= 0) and (maze[row][col - 1] == PATH):
+#         # daca pleaca doar din stanga si face stanga nu inainteaza
+#         col -= 1
+#     elif (directie == SUS) and (maze[row - 1][col] == PATH):
+#         row -= 1
+#     elif (directie == JOS) and (maze[row + 1][col] == PATH):
+#         row += 1
+#     return row, col
+#
+
+
+def get_rand_dir_different_from(last_tried_dir):
+    lista = [direct for direct in DIRECTII if direct not in last_tried_dir]
+    if lista:
+        return lista[random.randint(0, len(lista) - 1)]
+    else:
+        return DEBLOCARE
+
+
+def gen_pathway(individ, start_coord, dim_labirint):
+    pathway = []
+    walls_coord = []  # variabile contine coordonatele incercate care sunt pereti
+    coord = start_coord
+    pathway.append(coord)
+
+    last_tried_dir = []
+    coming_direction = None
+    for gen in individ:
+
+        directie = det_directie(gen)
+        row, col = coord
+        """COORDONATELE SUNT REPREZENTATE DE LINII SI COLOANE Y=LINIA, X=COLOANA"""
+        # TODO AICI BLOCAJE
+        if directie in last_tried_dir:
+            print(last_tried_dir)
+
+            temp_dir = get_rand_dir_different_from(last_tried_dir)
+            if temp_dir != DEBLOCARE:
+                directie = temp_dir
+            else:  # aici s-a blocat de tot deci ii directia din care a venit
+                directie = coming_direction
+
+        if directie == DREAPTA:
+            if col + 1 == dim_labirint:  # ies din bucla cand ajunge la finish, nr de elem din pathway e distanta
+                break
+            if maze[row][col + 1] == PATH:
+                col += 1
+                last_tried_dir = [STANGA]  # pun la incercari directia din care a venit
+                coming_direction = STANGA
+            elif maze[row][col + 1] == WALL:
+                # daca directia nu e in walls, o adaug, daca e dau alta directie
+                # if (row, col + 1) in maze:
+                #     #new directie
+                #     last_tried_dir.append(DREAPTA)
+                #     pass
+                # else:
+                #
+                # walls_coord.append((row,
+                #                     col + 1))  # daca urm coordonata e WALL o adaug la walls si tin minte directia in care am incercat
+                last_tried_dir.append(DREAPTA)
+
+        elif directie == STANGA:
+            if col - 1 >= 0:  # daca e la inceput si incearca stanga tine minte
+                last_tried_dir.append(STANGA)
+            elif maze[row][col - 1] == PATH:
+                col -= 1
+                last_tried_dir = [DREAPTA]
+                coming_direction=DREAPTA
+            elif maze[row][col - 1] == WALL:
+                walls_coord.append((row, col - 1))
+                last_tried_dir.append(STANGA)
+        elif directie == SUS:
+            if maze[row - 1][col] == PATH:
+                row -= 1
+                last_tried_dir = [JOS]
+                coming_direction=JOS
+            elif maze[row - 1][col] == WALL:
+                last_tried_dir.append(SUS)
+        elif directie == JOS:
+            if maze[row + 1][col] == PATH:
+                row += 1
+                last_tried_dir = [SUS]
+                coming_direction=SUS
+            elif maze[row + 1][col] == WALL:
+                last_tried_dir.append(JOS)
+
+        coord = (row, col)
+        pathway.append(coord)
+
+    return pathway
+
+
+maze = [["#", "#", "#", "#", "#", "#", "#", "#", "#", "#"],
+        ["#", " ", " ", " ", "#", " ", "#", " ", " ", " "],
+        ["#", "#", "#", " ", " ", " ", "#", " ", "#", "#"],
+        [" ", " ", "#", "#", " ", "#", "#", " ", "#", "#"],
+        ["#", " ", " ", "#", " ", "#", " ", " ", " ", "#"],
+        ["#", "#", " ", "#", " ", " ", " ", "#", "#", "#"],
+        ["#", " ", " ", "#", " ", "#", "#", "#", " ", "#"],
+        ["#", "#", " ", " ", " ", " ", "#", " ", " ", "#"],
+        ["#", " ", " ", "#", "#", " ", " ", " ", "#", "#"],
+        ["#", "#", "#", "#", "#", "#", "#", "#", "#", "#"]]
+DIM_LAB = len(maze)
+# mai multe drumuri spre iesire ca sa se minimizeze
+total_population = gen_population(gen_nr_genes(DIM_LAB), 20)
+
+pathways = []
+for ind in total_population:
+    pathways.append(gen_pathway(ind, (3, 0), DIM_LAB))
+
+for path in pathways:
+    print(path)
