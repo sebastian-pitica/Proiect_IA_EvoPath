@@ -69,13 +69,14 @@ def det_direction(angle):
 
 def det_angle_based_on(direction):
     if direction == RIGHT:
-        return 0
+        return random.uniform(0, LIMIT_SUP_RIGHT_ANGLE) if random.choice([True, False]) else random.uniform(
+            LIMIT_INF_RIGHT_ANGLE, 360)
     elif direction == LEFT:
-        return 180
+        return random.uniform(LIMIT_INF_LEFT_ANGLE, LIMIT_SUP_LEFT_ANGLE)
     elif direction == UP:
-        return 90
+        return random.uniform(LIMIT_INF_UP_ANGLE, LIMIT_SUP_UP_ANGLE)
     elif direction == DOWN:
-        return 270
+        return random.uniform(LIMIT_INF_DOWN_ANGLE, LIMIT_SUP_DOWN_ANGLE)
 
 
 def get_rand_dir_different_from(last_tried_dir):
@@ -111,7 +112,7 @@ def gen_adaptable_pathway(individual):
                 col += 1
                 last_tried_dir = [LEFT]
                 coming_direction = LEFT
-                individual[i-(len(last_tried_dir))]=det_angle_based_on(direction)
+                individual[i - (len(last_tried_dir))] = det_angle_based_on(direction)
 
             elif maze[row][col + 1] == WALL:
                 last_tried_dir.append(RIGHT)
@@ -123,7 +124,7 @@ def gen_adaptable_pathway(individual):
                 col -= 1
                 last_tried_dir = [RIGHT]
                 coming_direction = RIGHT
-                individual[i-(len(last_tried_dir))]=det_angle_based_on(direction)
+                individual[i - (len(last_tried_dir))] = det_angle_based_on(direction)
 
             elif maze[row][col - 1] == WALL:
                 last_tried_dir.append(LEFT)
@@ -132,7 +133,7 @@ def gen_adaptable_pathway(individual):
                 row -= 1
                 last_tried_dir = [DOWN]
                 coming_direction = DOWN
-                individual[i-(len(last_tried_dir))]=det_angle_based_on(direction)
+                individual[i - (len(last_tried_dir))] = det_angle_based_on(direction)
 
             elif maze[row - 1][col] == WALL:
                 last_tried_dir.append(UP)
@@ -141,7 +142,7 @@ def gen_adaptable_pathway(individual):
                 row += 1
                 last_tried_dir = [UP]
                 coming_direction = UP
-                individual[i-(len(last_tried_dir))]=det_angle_based_on(direction)
+                individual[i - (len(last_tried_dir))] = det_angle_based_on(direction)
 
             elif maze[row + 1][col] == WALL:
                 last_tried_dir.append(DOWN)
