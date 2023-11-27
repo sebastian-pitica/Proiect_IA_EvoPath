@@ -97,7 +97,7 @@ def get_rand_dir_different_from(last_tried_dir):
 
 
 # todo remove comments
-# todo update individual if it's blocked and you change the direction
+# todo update individual gene if it's blocked and you change the direction
 # todo if you find the end, dont copy the end coord till the end of normal pathway len
 def gen_adaptable_pathway(individual):
     pathway = []
