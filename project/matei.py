@@ -84,8 +84,7 @@ def get_rand_dir_different_from(last_tried_dir):
         return UNBLOCK
 
 
-# todo update individual gene if it's blocked and you change the direction
-# todo if you find the end, dont copy the end coord till the end of normal pathway len
+# (todo) if you find the end, dont copy the end coord 'till the end of normal pathway len
 def gen_adaptable_pathway(individual):
     pathway = []
     coord = MAZE_START
@@ -100,9 +99,9 @@ def gen_adaptable_pathway(individual):
         if direction in last_tried_dir:
             temp_dir = get_rand_dir_different_from(last_tried_dir)
             if temp_dir != UNBLOCK:
-                direction = temp_dir  # det_angle_based_on(temp_dir)
+                direction = temp_dir
             else:
-                direction = coming_direction  # det_angle_based_on(temp_dir)
+                direction = coming_direction
 
         if direction == RIGHT:
             if col + 1 == MAZE_SIZE:
