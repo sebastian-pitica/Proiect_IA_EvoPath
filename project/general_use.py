@@ -11,5 +11,8 @@
 #
 #  **************************************************************************/
 
+MAZE_START = (None, None)
+MAZE_END = (None, None)
+MAZE_SIZE = None
 maze = list(list())
 populations = list(list())

@@ -8,20 +8,22 @@
 #  Module-History:
 #  Date        Author                Reason
 #  24.11.2023  Matei Rares          Basic structure
+#  27.11.2023  Pitica Sebastian     Updated gen_pathway
 #
 #  **************************************************************************/
 
 import random
+from general_use import maze, MAZE_START, MAZE_END, MAZE_SIZE
 from seba import PATH, WALL
+
+# todo name the variables from consts to functions vars in english
 
 DREAPTA = "dreapta"
 STANGA = "stanga"
 SUS = "sus"
 JOS = "jos"
 DEBLOCARE = "deblocare"
-
 DIRECTII = [DREAPTA, STANGA, SUS, JOS]
-
 LIMITA_SUPERIOARA_UNGHI_DREAPTA = 45
 LIMITA_INFERIOARA_UNGHI_DREAPTA = 315
 LIMITA_SUPERIOARA_UNGHI_STANGA = 225
@@ -65,7 +67,7 @@ def det_directie(angle):
         return JOS
 
 
-#
+# todo remove
 # def det_new_coord(curr_coord, gena, dim_labirint):
 #     directie = det_directie(gena)
 #     """COORDONATELE SUNT REPREZENTATE DE LINII SI COLOANE Y=LINIA, X=COLOANA"""
@@ -94,10 +96,11 @@ def get_rand_dir_different_from(last_tried_dir):
         return DEBLOCARE
 
 
-def gen_pathway(individ, start_coord, dim_labirint):
+# todo remove comments
+def gen_pathway(individ):
     pathway = []
     walls_coord = []  # variabile contine coordonatele incercate care sunt pereti
-    coord = start_coord
+    coord = MAZE_START
     pathway.append(coord)
 
     last_tried_dir = []
@@ -118,7 +121,7 @@ def gen_pathway(individ, start_coord, dim_labirint):
                 directie = coming_direction
 
         if directie == DREAPTA:
-            if col + 1 == dim_labirint:  # ies din bucla cand ajunge la finish, nr de elem din pathway e distanta
+            if col + 1 == MAZE_SIZE:  # ies din bucla cand ajunge la finish, nr de elem din pathway e distanta
                 break
             if maze[row][col + 1] == PATH:
                 col += 1
@@ -167,23 +170,24 @@ def gen_pathway(individ, start_coord, dim_labirint):
     return pathway
 
 
-maze = [["#", "#", "#", "#", "#", "#", "#", "#", "#", "#"],
-        ["#", " ", " ", " ", "#", " ", "#", " ", " ", " "],
-        ["#", "#", "#", " ", " ", " ", "#", " ", "#", "#"],
-        [" ", " ", "#", "#", " ", "#", "#", " ", "#", "#"],
-        ["#", " ", " ", "#", " ", "#", " ", " ", " ", "#"],
-        ["#", "#", " ", "#", " ", " ", " ", "#", "#", "#"],
-        ["#", " ", " ", "#", " ", "#", "#", "#", " ", "#"],
-        ["#", "#", " ", " ", " ", " ", "#", " ", " ", "#"],
-        ["#", " ", " ", "#", "#", " ", " ", " ", "#", "#"],
-        ["#", "#", "#", "#", "#", "#", "#", "#", "#", "#"]]
-DIM_LAB = len(maze)
-# mai multe drumuri spre iesire ca sa se minimizeze
-total_population = gen_population(gen_nr_genes(DIM_LAB), 20)
-
-pathways = []
-for ind in total_population:
-    pathways.append(gen_pathway(ind, (3, 0), DIM_LAB))
-
-for path in pathways:
-    print(path)
+# todo remove
+# maze = [["#", "#", "#", "#", "#", "#", "#", "#", "#", "#"],
+#         ["#", " ", " ", " ", "#", " ", "#", " ", " ", " "],
+#         ["#", "#", "#", " ", " ", " ", "#", " ", "#", "#"],
+#         [" ", " ", "#", "#", " ", "#", "#", " ", "#", "#"],
+#         ["#", " ", " ", "#", " ", "#", " ", " ", " ", "#"],
+#         ["#", "#", " ", "#", " ", " ", " ", "#", "#", "#"],
+#         ["#", " ", " ", "#", " ", "#", "#", "#", " ", "#"],
+#         ["#", "#", " ", " ", " ", " ", "#", " ", " ", "#"],
+#         ["#", " ", " ", "#", "#", " ", " ", " ", "#", "#"],
+#         ["#", "#", "#", "#", "#", "#", "#", "#", "#", "#"]]
+# DIM_LAB = len(maze)
+# # mai multe drumuri spre iesire ca sa se minimizeze
+# total_population = gen_population(gen_nr_genes(DIM_LAB), 20)
+#
+# pathways = []
+# for ind in total_population:
+#     pathways.append(gen_pathway(ind, (3, 0), DIM_LAB))
+#
+# for path in pathways:
+#     print(path)
