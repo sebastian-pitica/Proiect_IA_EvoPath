@@ -15,7 +15,7 @@
 import numpy as np
 import random as rd
 from general_use import MAZE_SIZE, MAZE_END
-from matei import gen_adaptable_pathway, gen_population, gen_individ
+from matei import gen_adaptable_pathway, gen_population, gen_individual
 
 NORTH = 1
 EAST = 2
@@ -77,7 +77,7 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
     population_length = len(population)
     nr_genes = len(population[0])
 
-    speeds: list[list] = [gen_individ(len(population[0])) for _ in range(population_length)]
+    speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
     personal_bests: list[list] = [population[i] for i in range(0, population_length)]
     fitness_personal_bests: list = [0 for _ in range(population_length)]
 
@@ -125,7 +125,7 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
     fitness_local_bests[0], local_bests[0] = adaptable_fitness_function(local_bests[0])
     fitness_local_bests[1], local_bests[1] = adaptable_fitness_function(local_bests[1])
 
-    speeds: list[list] = [gen_individ(len(population[0])) for _ in range(population_length)]
+    speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
     personal_bests: list[list] = [population[i] for i in range(0, population_length)]
     fitness_personal_bests: list = [0 for _ in range(population_length)]
 

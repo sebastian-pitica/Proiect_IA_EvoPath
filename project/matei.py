@@ -36,21 +36,22 @@ def gen_rand_angle():
     return random.uniform(0, 360)
 
 
-def gen_nr_genes(dim_labirint):
-    return random.randint(2 * dim_labirint, dim_labirint * dim_labirint)
+# todo maybe will not be needed
+def gen_nr_genes(maze_size):
+    return random.randint(2 * maze_size, maze_size * maze_size)
 
 
-def gen_individ(nr_genes):
-    individ = []
+def gen_individual(nr_genes):
+    individual = []
     for i in range(0, nr_genes):
-        individ.append(gen_rand_angle())
-    return individ
+        individual.append(gen_rand_angle())
+    return individual
 
 
 def gen_population(nr_genes, nr_indivizi):
     population = []
     for i in range(0, nr_indivizi):
-        population.append(gen_individ(nr_genes))
+        population.append(gen_individual(nr_genes))
     return population
 
 
@@ -84,7 +85,6 @@ def get_rand_dir_different_from(last_tried_dir):
         return UNBLOCK
 
 
-# (todo) if you find the end, dont copy the end coord 'till the end of normal pathway len
 def gen_adaptable_pathway(individual):
     pathway = []
     coord = MAZE_START
