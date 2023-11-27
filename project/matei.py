@@ -97,7 +97,8 @@ def get_rand_dir_different_from(last_tried_dir):
 
 
 # todo remove comments
-def gen_pathway(individ):
+# todo update individual if it's blocked and you change the direction
+def gen_adaptable_pathway(individual):
     pathway = []
     walls_coord = []  # variabile contine coordonatele incercate care sunt pereti
     coord = MAZE_START
@@ -105,7 +106,7 @@ def gen_pathway(individ):
 
     last_tried_dir = []
     coming_direction = None
-    for gen in individ:
+    for gen in individual:
 
         directie = det_directie(gen)
         row, col = coord
@@ -167,7 +168,7 @@ def gen_pathway(individ):
         coord = (row, col)
         pathway.append(coord)
 
-    return pathway
+    return pathway, individual
 
 
 # todo remove
