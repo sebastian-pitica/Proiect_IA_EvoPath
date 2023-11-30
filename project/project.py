@@ -13,7 +13,7 @@
 #  27.11.2023  Matei Rares           Updated name variables and gen_adaptable_pathway(), deleted comments
 #  27.11.2023  Sebastian Pitica      Added particle swarm optimization algorithm lb and gb, added fitness func, added manhattan distance func, added eliminate duplicate neighbors func
 #  28.11.2023  Sebastian Pitica      Added get_values func, added draw_maze func, added draw_smooth_path func, added run_simulation func, added create_simulation_window func, specific future todos and added maze specific constants
-#
+#  29.11.2023  Matei Rares           Normalize angles
 #  **************************************************************************/
 
 #########################################################################################################
@@ -39,6 +39,7 @@ LIMIT_INF_UP_ANGLE = 45
 LIMIT_SUP_DOWN_ANGLE = 315
 LIMIT_INF_DOWN_ANGLE = 225
 
+normalizeAngle = lambda angle: angle % 360
 
 def gen_rand_angle():
     return random.uniform(0, 360)
