@@ -13,7 +13,8 @@
 #  27.11.2023  Matei Rares           Updated name variables and gen_adaptable_pathway(), deleted comments
 #  27.11.2023  Sebastian Pitica      Added particle swarm optimization algorithm lb and gb, added fitness func, added manhattan distance func, added eliminate duplicate neighbors func
 #  28.11.2023  Sebastian Pitica      Added get_values func, added draw_maze func, added draw_smooth_path func, added run_simulation func, added create_simulation_window func, specific future todos and added maze specific constants
-#  29.11.2023  Matei Rares           Normalize angles
+#  29.11.2023  Matei Rares           Normalize angles, modify bug in gen_adaptable_pathway()
+#  30.11.2023  Matei Rares           Get values from input window and verify them, animate particles as circles with a number inside, function to draw all particles in maze, draw particles sequentially, added stop animation button
 #  **************************************************************************/
 
 #########################################################################################################
@@ -40,6 +41,7 @@ LIMIT_SUP_DOWN_ANGLE = 315
 LIMIT_INF_DOWN_ANGLE = 225
 
 normalizeAngle = lambda angle: angle % 360
+
 
 def gen_rand_angle():
     return random.uniform(0, 360)
@@ -126,15 +128,16 @@ def gen_adaptable_pathway(individual):
 
         elif direction == LEFT:
             if col - 1 >= 0:
+                if maze[row][col - 1] == PATH:
+                    col -= 1
+                    last_tried_dir = [RIGHT]
+                    coming_direction = RIGHT
+                    individual[i - (len(last_tried_dir))] = det_angle_based_on(direction)
+                elif maze[row][col - 1] == WALL:
+                    last_tried_dir.append(LEFT)
+            else:
                 last_tried_dir.append(LEFT)
-            elif maze[row][col - 1] == PATH:
-                col -= 1
-                last_tried_dir = [RIGHT]
-                coming_direction = RIGHT
-                individual[i - (len(last_tried_dir))] = det_angle_based_on(direction)
 
-            elif maze[row][col - 1] == WALL:
-                last_tried_dir.append(LEFT)
         elif direction == UP:
             if maze[row - 1][col] == PATH:
                 row -= 1
@@ -229,7 +232,8 @@ def adaptable_fitness_function(individual: list) -> (float, list):
     return fitness_value, individual
 
 
-def particle_swarm_optimization_gbest(population: list, generations: int, consts: dict) -> list:
+def particle_swarm_optimization_gbest(population: list, generations: int, consts: dict,canvas) -> list:
+    print("population: ", str(population)+ "\n" + "generations: ", str(generations) + "\n" + "consts: ", str(consts))
     population_length = len(population)
     nr_genes = len(population[0])
 
@@ -253,21 +257,33 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
             if fitness > fitness_personal_best:
                 personal_best, fitness_personal_best = xi, fitness
 
+            print(" fitness_personal_bests: ", fitness_personal_bests, " fitness_global_best: ", fitness_global_best)
             if fitness_personal_bests > fitness_global_best:
                 global_best, fitness_global_best = personal_best, fitness_personal_bests
 
-            vi = [(consts['w'] * vi[j] +
+            vi = [normalizeAngle(consts['w'] * vi[j] +
                    consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
                    consts['c2'] * consts['r2'] * (global_best[j] - xi[j]))
                   for j in range(0, nr_genes)]
-
+            # (todo) apelare normalizare peste  vi
+            #vi = normalizeAngle(vi)
             xi = xi + vi
+            xi= [normalizeAngle(ind) for ind in xi]
+
+            # (todo) apelare normalizare peste xi
 
             ###########################################################################
             population[i] = xi
             speeds[i] = vi
             personal_bests[i] = personal_best
             fitness_personal_bests[i] = fitness_personal_best
+
+            path,_=gen_adaptable_pathway(population[i])
+            draw_smooth_path(canvas, path, 30, i)
+
+            # gen pathway for population[i] sau xi
+            # cu ce s a generat pornesti animatie cu nr particula i
+            # print up side corner genereation nr
 
     return global_best
 
@@ -307,8 +323,11 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
                    consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
                    consts['c2'] * consts['r2'] * (local_best[j] - xi[j]))
                   for j in range(0, nr_genes)]
+            # (todo) apelare normalizare peste  vi
+            vi = normalizeAngle(vi)
+            xi = normalizeAngle(xi + vi)
 
-            xi = xi + vi
+            # (todo) apelare normalizare peste xi
 
             ###########################################################################
             population[i] = xi
@@ -318,6 +337,9 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
             local_bests[i % 2] = local_best
             fitness_local_bests[i % 2] = fitness_local_best
 
+            # gen pathway for population[i] sau xi
+            # cu ce s a generat pornesti animatie cu nr particula i
+            # print up side corner genereation nr
     return local_bests
 
 
@@ -325,11 +347,14 @@ def particle_swarm_optimization(population_length: int, nr_genes: int, generatio
                                 consts: dict):
     population = gen_population(nr_genes, population_length)
     gbest = particle_swarm_optimization_gbest(population, generations, consts)
+
     lbest = particle_swarm_optimization_lbest(population, generations, consts)
-    # todo return gbest and lbest if needed
+    # todo return gbest and lbest
+    # (todo) print gbest and lbest on window
 
 
 def gen_maze_wilson(size_factor: int) -> (np.ndarray, int, tuple, tuple):
+    global maze, MAZE_START, MAZE_END
     matrix = np.zeros(shape=(size_factor, size_factor))
     min_coord = 0
     max_coord = size_factor - 1
@@ -400,21 +425,34 @@ def gen_maze_wilson(size_factor: int) -> (np.ndarray, int, tuple, tuple):
 
     maze[start_i_coord, star_j_coord] = PATH
     maze[finish_i_coord, finish_j_coord] = PATH
+    MAZE_START = (start_i_coord, star_j_coord)
+    MAZE_END = (finish_i_coord, finish_j_coord)
 
-    return maze, 2 * size_factor + 1, (start_i_coord, star_j_coord), (finish_i_coord, finish_j_coord)
+    return 2 * size_factor + 1
 
 
-def get_values():
-    global w, c1, r1, r2, c2, gene_length, population_length, generations, maze_size_factor
-    w = 11  # int(entry_w.get()) # todo remove default values
-    c1 = 11  # int(entry_c1.get())
-    r1 = 11  # int(entry_r1.get())
-    r2 = 11  # int(entry_r2.get())
-    c2 = 11  # int(entry_c2.get())
-    gene_length = 11  # int(entry_gene_length.get())
-    population_length = 11  # int(entry_population_length.get())
-    generations = 11  # int(entry_generations.get())
-    maze_size_factor = 11  # int(entry_maze_size_factor.get())
+consts = {'w': 0, 'c1': 0, 'r1': 0, 'r2': 0, 'c2': 0}
+GENES = 0
+INDIVIDUALS = 0
+GENERATIONS = 0
+ANIMATION_SPEED = 0
+input_window = 0
+
+
+def get_values(entry_w, entry_c1, entry_r1, entry_r2, entry_c2, entry_gene_length, entry_population_length,
+               entry_generations, entry_maze_size_factor, animation_speed_factor):
+    global consts, GENES, INDIVIDUALS, GENERATIONS, ANIMATION_SPEED, MAZE_SIZE
+
+    consts['w'] = 11 if entry_w == '' else int(entry_w)
+    consts['c1'] = 11 if entry_c1 == '' else int(entry_c1)
+    consts['r1'] = 11 if entry_r1 == '' else int(entry_r1)
+    consts['r2'] = 11 if entry_r2 == '' else int(entry_r2)
+    consts['c2'] = 11 if entry_c2 == '' else int(entry_c2)
+    GENES = 11 if entry_gene_length == '' else int(entry_gene_length)
+    INDIVIDUALS = 11 if entry_population_length == '' else int(entry_population_length)
+    GENERATIONS = 11 if entry_generations == '' else int(entry_generations)
+    MAZE_SIZE = 11 if entry_maze_size_factor == '' else int(entry_maze_size_factor)
+    ANIMATION_SPEED = 11 if animation_speed_factor == '' else int(animation_speed_factor)
 
 
 def draw_maze(maze, canvas, width, height):
@@ -430,37 +468,40 @@ def draw_maze(maze, canvas, width, height):
             if char == '#':
                 canvas.create_rectangle(j * scale_factor + x_offset, i * scale_factor + y_offset,
                                         (j + 1) * scale_factor + x_offset, (i + 1) * scale_factor + y_offset,
-                                        fill='black')
+                                        fill='green')
 
 
 # todo should be called from the simulation window after every particle
 # todo in the end the particle should be cleared
 def draw_smooth_path(canvas, path_coords, scale_factor, particle_number):
-    path_coords[len(path_coords)] = path_coords[-1]  # Add the last point again to make the animation smoother
+    path_coords.append(path_coords[-1])  # Add the last point again to make the animation smoother
+    #path_coords[len(path_coords)] = path_coords[-1]  # Add the last point again to make the animation smoother
 
     def animate(index):
         if index < len(path_coords) - 1:
-            x1, y1 = path_coords[index]
-            x2, y2 = path_coords[index + 1]
+            y1, x1 = path_coords[index]
+            y2, x2 = path_coords[index + 1]
+            # x1,y1 = path_coords[index]
+            # x2,y2 = path_coords[index + 1]
 
-            steps = 20 if (x1, y1) != (x2, y2) else 4
+            steps = 20 if (x1, y1) != (x2, y2) else 1
             x_step = (x2 - x1) / steps
             y_step = (y2 - y1) / steps
-
             for step in range(steps):
                 x = x1 + step * x_step
                 y = y1 + step * y_step
 
                 canvas.delete("smooth_point")
 
-                canvas.create_rectangle(x * scale_factor, y * scale_factor,
-                                        (x + 1) * scale_factor, (y + 1) * scale_factor,
-                                        fill='red', outline='red', tags="smooth_point")
+                canvas.create_oval(x * scale_factor, y * scale_factor,
+                                   (x + 1) * scale_factor, (y + 1) * scale_factor,
+                                   fill="purple", outline="black", tags="smooth_point"
+                                   )
 
                 canvas.create_text((x + 0.5) * scale_factor, (y + 0.5) * scale_factor,
                                    text=str(particle_number), fill='white', tags="smooth_point")
                 canvas.update()
-                canvas.after(200)
+                canvas.after(1)
             canvas.after(0, animate, index + 1)
         else:
             canvas.delete("smooth_point")
@@ -468,83 +509,164 @@ def draw_smooth_path(canvas, path_coords, scale_factor, particle_number):
     animate(0)
 
 
+def draw_all(scale_factor, paths, canvas):
+    def update_animation(index):
+        for i, path in enumerate(paths):
+            if index < len(path) - 1:
+                y1, x1 = path[index]
+                x = x1
+                y = y1
+
+                canvas.delete(f"robot_{i}")
+                canvas.create_oval(x * scale_factor, y * scale_factor,
+                                   (x + 1) * scale_factor, (y + 1) * scale_factor,
+                                   fill="purple", outline="black", tags=f"robot_{i}")
+
+                canvas.create_text((x + 0.5) * scale_factor, (y + 0.5) * scale_factor,
+                                   text=str(i), fill='white', tags=f"robot_{i}")
+                canvas.update()
+                canvas.after(50)
+
+        canvas.after(0, update_animation, index + 1)
+
+    update_animation(0)
+
+
+def stop_animation():
+    print("Setez valoare ca sa iasa din bucla animatiei")
+
+
 def run_simulation():
+    global MAZE_SIZE, maze
     simulation_window = tk.Tk()
     simulation_window.title("Simulation")
-    simulation_window.resizable(False, False)
-
+    simulation_window.resizable(True, True)
     fixed_canvas_width = 740
     fixed_canvas_height = 740
+    offset_x = 400;
+    offset_y = 100;
+    simulation_window.geometry(f"{fixed_canvas_width}x{fixed_canvas_height}+{offset_x}+{offset_y}")
+
     canvas = tk.Canvas(simulation_window, width=fixed_canvas_width, height=fixed_canvas_height)
     canvas.pack()
+    button = tk.Button(simulation_window, text="Stop Animation!", command=stop_animation)
+    button.place(relx=1.0, rely=0.0,
+                 anchor='ne')  # relx=0.0 means the left edge, rely=0.0 means the top edge, anchor='nw' means northwest
+
+    ##########################################################################################
+    population=[]
+    for i in range(INDIVIDUALS):
+        population.append(gen_individual(GENES))
+
+    gen_maze_wilson(MAZE_SIZE)
+
+    draw_maze(maze, canvas, len(maze) * 30, len(maze) * 30)
+
+    particle_swarm_optimization_gbest(population, GENERATIONS, consts, canvas)
+   # particle_swarm_optimization_lbest(population, GENERATIONS, consts)
+
+    paths = []
+    pathway, _ = gen_adaptable_pathway(gen_individual(80))
+    paths.append(pathway)
+    pathway, _ = gen_adaptable_pathway(gen_individual(80))
+    paths.append(pathway)
+
+    draw_all(30, paths, canvas)
+
+    ##########################################################################################
 
     simulation_window.mainloop()
 
-    # todo take values from input window
-    # todo check them
-    # todo generate maze
+    # todo take values from input window x
+    # todo check them x
+    # todo generate maze x
     # todo run simulation from gbest button and from lbest button
-    # todo draw particles on maze animations
+    # todo draw particles on maze animations x
 
-    # todo after maze is generated set it to maze variable
-    # todo take animation speed from input window
-    # todo add a button to stop the animation
+    # todo after maze is generated set it to maze variable  -> global maze in wilson ?
+    # todo take animation speed from input window x
+    # todo add a button to stop the animation x-stop and resume?
     # todo add a button to stop the simulation
-    # todo draw particles as circles with a number inside
-    # todo make windows of fixed size
-    # todo fill the input window with default values
+    # todo draw particles as circles with a number inside x
+    # todo make windows of fixed size x
+    # todo fill the input window with default values x-default from window or from validation?
     # todo when run the simulation call the pos function with the specific params
     # todo at the end of the simulation clear the particles from the maze and provide the results
+    # albastru maze rosu particle
+    # valori din
+    # din alg cu gbest setez in dictionaru cu consts[]
 
 
 def create_simulation_window():
     input_window = tk.Tk()
+
     fixed_input_window_width = 300
     fixed_input_window_height = 300
     input_window.title("Input values for simulation")
     input_window.resizable(False, False)
-    # todo set fixed size
-    # input_window.geometry(f"{fixed_input_window_width}x{fixed_input_window_height}")
+    offset_x = 100;
+    offset_y = 50;
+    input_window.geometry(f"{fixed_input_window_width}x{fixed_input_window_height}+{offset_x}+{offset_y}")
 
     # Create and place input labels and entry widgets
     tk.Label(input_window, text="w:").grid(row=0, column=0)
+
     entry_w = tk.Entry(input_window)
     entry_w.grid(row=0, column=1)
+    entry_w.insert(0, "11")
 
     tk.Label(input_window, text="c1:").grid(row=1, column=0)
     entry_c1 = tk.Entry(input_window)
     entry_c1.grid(row=1, column=1)
+    entry_c1.insert(1, "11")
 
     tk.Label(input_window, text="r1:").grid(row=2, column=0)
     entry_r1 = tk.Entry(input_window)
     entry_r1.grid(row=2, column=1)
+    entry_r1.insert(2, "11")
 
     tk.Label(input_window, text="r2:").grid(row=3, column=0)
     entry_r2 = tk.Entry(input_window)
     entry_r2.grid(row=3, column=1)
+    entry_r2.insert(3, "11")
 
     tk.Label(input_window, text="c2:").grid(row=4, column=0)
     entry_c2 = tk.Entry(input_window)
     entry_c2.grid(row=4, column=1)
+    entry_c2.insert(4, "11")
 
     tk.Label(input_window, text="Individual Gene Length:").grid(row=5, column=0)
     entry_gene_length = tk.Entry(input_window)
     entry_gene_length.grid(row=5, column=1)
+    entry_gene_length.insert(5, "11")
 
     tk.Label(input_window, text="Population Length:").grid(row=6, column=0)
     entry_population_length = tk.Entry(input_window)
     entry_population_length.grid(row=6, column=1)
+    entry_population_length.insert(6, "11")
 
     tk.Label(input_window, text="Generations:").grid(row=7, column=0)
     entry_generations = tk.Entry(input_window)
     entry_generations.grid(row=7, column=1)
+    entry_generations.insert(7, "11")
 
     tk.Label(input_window, text="Maze Size Factor:").grid(row=8, column=0)
     entry_maze_size_factor = tk.Entry(input_window)
     entry_maze_size_factor.grid(row=8, column=1)
+    entry_maze_size_factor.insert(8, "11")
 
-    submit_button = ttk.Button(input_window, text="Run simulation", command=run_simulation)
-    submit_button.grid(row=9, column=0, columnspan=2, pady=10)
+    tk.Label(input_window, text="Animation speed:").grid(row=9, column=0)
+    animation_speed = tk.Entry(input_window)
+    animation_speed.grid(row=9, column=1)
+    animation_speed.insert(9, "11")
+
+    submit_button = ttk.Button(input_window, text="Run simulation", command=lambda: (
+        get_values(entry_w.get(), entry_c1.get(), entry_r1.get(), entry_r2.get(), entry_c2.get(),
+                   entry_gene_length.get(),
+                   entry_population_length.get(), entry_generations.get(), entry_maze_size_factor.get(),
+                   animation_speed.get())
+        , run_simulation()))
+    submit_button.grid(row=10, column=0, columnspan=2, pady=10)
 
     input_window.mainloop()
 
