@@ -47,11 +47,6 @@ def gen_rand_angle():
     return random.uniform(0, 360)
 
 
-# todo maybe will not be needed
-def gen_nr_genes(maze_size):
-    return random.randint(2 * maze_size, maze_size * maze_size)
-
-
 def gen_individual(nr_genes):
     individual = []
     for i in range(0, nr_genes):
@@ -144,6 +139,7 @@ def gen_adaptable_pathway(individual):
                 last_tried_dir = [DOWN]
                 coming_direction = DOWN
                 individual[i - (len(last_tried_dir))] = det_angle_based_on(direction)
+                # verifica daca directiile in cruce sunt cel putin 3 paths, daca sunt alegeo pe aia pe unde nu ai mai fost, asta inseamna sa faci o verificare cu drumul facut deja
 
             elif maze[row - 1][col] == WALL:
                 last_tried_dir.append(UP)
@@ -232,11 +228,10 @@ def adaptable_fitness_function(individual: list) -> (float, list):
     return fitness_value, individual
 
 
-def particle_swarm_optimization_gbest(population: list, generations: int, consts: dict,canvas) -> list:
-    print("population: ", str(population)+ "\n" + "generations: ", str(generations) + "\n" + "consts: ", str(consts))
+def particle_swarm_optimization_gbest(population: list, generations: int, consts: dict, canvas) -> list:
     population_length = len(population)
     nr_genes = len(population[0])
-
+    print("nr_genes "+str(nr_genes))
     speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
     personal_bests: list[list] = [population[i] for i in range(0, population_length)]
     fitness_personal_bests: list = [0 for _ in range(population_length)]
@@ -244,7 +239,9 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
     global_best: list = population[0]
     fitness_global_best, global_best = adaptable_fitness_function(global_best)
 
-    for _ in range(0, generations):
+    for generation in range(0, generations):
+        print("Generatia"+ str(generation))
+
         for i in range(0, population_length):
             xi: list = population[i]
             vi: list = speeds[i]
@@ -257,20 +254,16 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
             if fitness > fitness_personal_best:
                 personal_best, fitness_personal_best = xi, fitness
 
-            print(" fitness_personal_bests: ", fitness_personal_bests, " fitness_global_best: ", fitness_global_best)
             if fitness_personal_best > fitness_global_best:
                 global_best, fitness_global_best = personal_best, fitness_personal_best
 
             vi = [normalizeAngle(consts['w'] * vi[j] +
-                   consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
-                   consts['c2'] * consts['r2'] * (global_best[j] - xi[j]))
-                  for j in range(0, nr_genes)]
-            # (todo) apelare normalizare peste  vi
-            #vi = normalizeAngle(vi)
-            xi = xi + vi
-            xi= [normalizeAngle(ind) for ind in xi]
+                                 consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
+                                 consts['c2'] * consts['r2'] * (global_best[j] - xi[j]))
+                  for j in range(0, nr_genes)]  # normalizare peste  vi
 
-            # (todo) apelare normalizare peste xi
+            xi = xi + vi
+            xi = [normalizeAngle(ind) for ind in xi]  # normalizre peste xi
 
             ###########################################################################
             population[i] = xi
@@ -278,12 +271,23 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
             personal_bests[i] = personal_best
             fitness_personal_bests[i] = fitness_personal_best
 
+            ###############desenez o particula
             path,_=gen_adaptable_pathway(population[i])
-            draw_smooth_path(canvas, path, 30, i)
+            print(str(len(path))+"   "+str(path))
+            draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, i)
+            ###############
 
-            # gen pathway for population[i] sau xi
-            # cu ce s a generat pornesti animatie cu nr particula i
-            # print up side corner genereation nr
+        ############## gen toate particule
+        # paths = []
+        # for i in range(0, population_length):
+        #     path, _ = gen_adaptable_pathway(population[i])
+        #     paths.append(path)
+        #
+        # draw_all(30, paths, canvas)
+        ##############
+
+        # gen pathway for population[i] sau xi
+        # cu ce s a generat pornesti animatie cu nr particula i
 
     return global_best
 
@@ -346,11 +350,13 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
 def particle_swarm_optimization(population_length: int, nr_genes: int, generations: int,
                                 consts: dict):
     population = gen_population(nr_genes, population_length)
-    gbest = particle_swarm_optimization_gbest(population, generations, consts)
-
-    lbest = particle_swarm_optimization_lbest(population, generations, consts)
+    if SWITCH_BEST==None:
+        print("Trebuie selectat gbest sau lbest")
+    elif SWITCH_BEST == False :
+        lbest = particle_swarm_optimization_lbest(population, generations, consts)
+    else:
+        gbest = particle_swarm_optimization_gbest(population, generations, consts)
     # todo return gbest and lbest
-    # (todo) print gbest and lbest on window
 
 
 def gen_maze_wilson(size_factor: int) -> (np.ndarray, int, tuple, tuple):
@@ -437,7 +443,8 @@ INDIVIDUALS = 0
 GENERATIONS = 0
 ANIMATION_SPEED = 0
 input_window = 0
-
+PARTICLE_COLOR="red"
+MAZE_COLOR="blue"
 
 def get_values(entry_w, entry_c1, entry_r1, entry_r2, entry_c2, entry_gene_length, entry_population_length,
                entry_generations, entry_maze_size_factor, animation_speed_factor):
@@ -468,14 +475,13 @@ def draw_maze(maze, canvas, width, height):
             if char == '#':
                 canvas.create_rectangle(j * scale_factor + x_offset, i * scale_factor + y_offset,
                                         (j + 1) * scale_factor + x_offset, (i + 1) * scale_factor + y_offset,
-                                        fill='green')
+                                        fill=MAZE_COLOR)
 
 
-# todo should be called from the simulation window after every particle
-# todo in the end the particle should be cleared
 def draw_smooth_path(canvas, path_coords, scale_factor, particle_number):
+    global ANIMATION_SPEED
     path_coords.append(path_coords[-1])  # Add the last point again to make the animation smoother
-    #path_coords[len(path_coords)] = path_coords[-1]  # Add the last point again to make the animation smoother
+    # path_coords[len(path_coords)] = path_coords[-1]  # Add the last point again to make the animation smoother
 
     def animate(index):
         if index < len(path_coords) - 1:
@@ -484,7 +490,8 @@ def draw_smooth_path(canvas, path_coords, scale_factor, particle_number):
             # x1,y1 = path_coords[index]
             # x2,y2 = path_coords[index + 1]
 
-            steps = 20 if (x1, y1) != (x2, y2) else 1
+            speed_factor = abs(1000 - ANIMATION_SPEED)
+            steps = speed_factor if (x1, y1) != (x2, y2) else 1
             x_step = (x2 - x1) / steps
             y_step = (y2 - y1) / steps
             for step in range(steps):
@@ -495,13 +502,13 @@ def draw_smooth_path(canvas, path_coords, scale_factor, particle_number):
 
                 canvas.create_oval(x * scale_factor, y * scale_factor,
                                    (x + 1) * scale_factor, (y + 1) * scale_factor,
-                                   fill="purple", outline="black", tags="smooth_point"
+                                   fill=PARTICLE_COLOR, outline="black", tags="smooth_point"
                                    )
 
                 canvas.create_text((x + 0.5) * scale_factor, (y + 0.5) * scale_factor,
                                    text=str(particle_number), fill='white', tags="smooth_point")
                 canvas.update()
-                canvas.after(1)
+                # canvas.after(1)
             canvas.after(0, animate, index + 1)
         else:
             canvas.delete("smooth_point")
@@ -511,21 +518,27 @@ def draw_smooth_path(canvas, path_coords, scale_factor, particle_number):
 
 def draw_all(scale_factor, paths, canvas):
     def update_animation(index):
-        for i, path in enumerate(paths):
-            if index < len(path) - 1:
-                y1, x1 = path[index]
+        for i, pat in enumerate(paths):
+            if index <= len(pat) -1:
+                y1, x1 = pat[index]
                 x = x1
                 y = y1
 
                 canvas.delete(f"robot_{i}")
                 canvas.create_oval(x * scale_factor, y * scale_factor,
                                    (x + 1) * scale_factor, (y + 1) * scale_factor,
-                                   fill="purple", outline="black", tags=f"robot_{i}")
+                                   fill=PARTICLE_COLOR, outline="black", tags=f"robot_{i}")
 
                 canvas.create_text((x + 0.5) * scale_factor, (y + 0.5) * scale_factor,
                                    text=str(i), fill='white', tags=f"robot_{i}")
                 canvas.update()
-                canvas.after(50)
+                speed_factor = abs(1000 - ANIMATION_SPEED)
+
+                canvas.after(speed_factor)
+            else:
+                canvas.delete(f"robot_{i}")
+                return
+
 
         canvas.after(0, update_animation, index + 1)
 
@@ -535,6 +548,10 @@ def draw_all(scale_factor, paths, canvas):
 def stop_animation():
     print("Setez valoare ca sa iasa din bucla animatiei")
 
+
+DRAW_SIZE_FACTOR = 30
+
+SWITCH_BEST=None;
 
 def run_simulation():
     global MAZE_SIZE, maze
@@ -554,24 +571,15 @@ def run_simulation():
                  anchor='ne')  # relx=0.0 means the left edge, rely=0.0 means the top edge, anchor='nw' means northwest
 
     ##########################################################################################
-    population=[]
+    population = []
+
     for i in range(INDIVIDUALS):
         population.append(gen_individual(GENES))
 
     gen_maze_wilson(MAZE_SIZE)
-
-    draw_maze(maze, canvas, len(maze) * 30, len(maze) * 30)
-
+    draw_maze(maze, canvas, len(maze) * DRAW_SIZE_FACTOR, len(maze) * DRAW_SIZE_FACTOR)
     particle_swarm_optimization_gbest(population, GENERATIONS, consts, canvas)
-   # particle_swarm_optimization_lbest(population, GENERATIONS, consts)
 
-    paths = []
-    pathway, _ = gen_adaptable_pathway(gen_individual(80))
-    paths.append(pathway)
-    pathway, _ = gen_adaptable_pathway(gen_individual(80))
-    paths.append(pathway)
-
-    draw_all(30, paths, canvas)
 
     ##########################################################################################
 
@@ -592,9 +600,12 @@ def run_simulation():
     # todo fill the input window with default values x-default from window or from validation?
     # todo when run the simulation call the pos function with the specific params
     # todo at the end of the simulation clear the particles from the maze and provide the results
-    # albastru maze rosu particle
-    # valori din
-    # din alg cu gbest setez in dictionaru cu consts[]
+
+    # todo maze albastru, particle rosu x
+    # todo preluare valori de la input window x
+    # todo draw_smooth_path() should be called from the simulation window after every particle and in the end the particle should be cleared x
+    # todo print gbest or lbest x
+    # todo print up side corner genereation nr
 
 
 def create_simulation_window():
@@ -638,12 +649,12 @@ def create_simulation_window():
     tk.Label(input_window, text="Individual Gene Length:").grid(row=5, column=0)
     entry_gene_length = tk.Entry(input_window)
     entry_gene_length.grid(row=5, column=1)
-    entry_gene_length.insert(5, "11")
+    entry_gene_length.insert(5, "20")
 
     tk.Label(input_window, text="Population Length:").grid(row=6, column=0)
     entry_population_length = tk.Entry(input_window)
     entry_population_length.grid(row=6, column=1)
-    entry_population_length.insert(6, "11")
+    entry_population_length.insert(6, "5")
 
     tk.Label(input_window, text="Generations:").grid(row=7, column=0)
     entry_generations = tk.Entry(input_window)
@@ -658,7 +669,27 @@ def create_simulation_window():
     tk.Label(input_window, text="Animation speed:").grid(row=9, column=0)
     animation_speed = tk.Entry(input_window)
     animation_speed.grid(row=9, column=1)
-    animation_speed.insert(9, "11")
+    animation_speed.insert(9, "900")
+
+    checkbox_var1 = tk.IntVar()
+    checkbox_var2 = tk.IntVar()
+
+    def toggle_checkboxes():
+        if checkbox_var1.get():
+            checkbox2.config(state=tk.DISABLED)
+        else:
+            checkbox2.config(state=tk.NORMAL)
+
+        if checkbox_var2.get():
+            checkbox1.config(state=tk.DISABLED)
+        else:
+            checkbox1.config(state=tk.NORMAL)
+
+    checkbox1 = tk.Checkbutton(input_window, text="Local best", variable=checkbox_var1, command=toggle_checkboxes)
+    checkbox1.grid(row=11, column=0)
+
+    checkbox2 = tk.Checkbutton(input_window, text="Global best", variable=checkbox_var2, command=toggle_checkboxes)
+    checkbox2.grid(row=11, column=1)
 
     submit_button = ttk.Button(input_window, text="Run simulation", command=lambda: (
         get_values(entry_w.get(), entry_c1.get(), entry_r1.get(), entry_r2.get(), entry_c2.get(),
@@ -666,7 +697,7 @@ def create_simulation_window():
                    entry_population_length.get(), entry_generations.get(), entry_maze_size_factor.get(),
                    animation_speed.get())
         , run_simulation()))
-    submit_button.grid(row=10, column=0, columnspan=2, pady=10)
+    submit_button.grid(row=12, column=0, columnspan=2, pady=10)
 
     input_window.mainloop()
 
