@@ -273,7 +273,7 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
 
             ###############desenez o particula
             path,_=gen_adaptable_pathway(population[i])
-            print(str(len(path))+"   "+str(path))
+            print(f"Nr gene individ {i} :  "+str(len(path))+"  |  gene: "+str(path))
             draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, i)
             ###############
 
