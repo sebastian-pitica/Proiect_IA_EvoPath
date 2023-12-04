@@ -231,7 +231,6 @@ def adaptable_fitness_function(individual: list) -> (float, list):
 def particle_swarm_optimization_gbest(population: list, generations: int, consts: dict, canvas) -> list:
     population_length = len(population)
     nr_genes = len(population[0])
-    print("nr_genes "+str(nr_genes))
     speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
     personal_bests: list[list] = [population[i] for i in range(0, population_length)]
     fitness_personal_bests: list = [0 for _ in range(population_length)]
@@ -273,7 +272,7 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
 
             ###############desenez o particula
             path,_=gen_adaptable_pathway(population[i])
-            print(f"Nr gene individ {i} :  "+str(len(path))+"  |  gene: "+str(path))
+            #print(f"Nr gene individ {i} :  "+str(len(path))+"  |  gene: "+str(path))
             draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, i)
             ###############
 
