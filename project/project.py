@@ -258,8 +258,8 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
                 personal_best, fitness_personal_best = xi, fitness
 
             print(" fitness_personal_bests: ", fitness_personal_bests, " fitness_global_best: ", fitness_global_best)
-            if fitness_personal_bests > fitness_global_best:
-                global_best, fitness_global_best = personal_best, fitness_personal_bests
+            if fitness_personal_best > fitness_global_best:
+                global_best, fitness_global_best = personal_best, fitness_personal_best
 
             vi = [normalizeAngle(consts['w'] * vi[j] +
                    consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
@@ -316,8 +316,8 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
             if fitness > fitness_personal_best:
                 personal_best, fitness_personal_best = xi, fitness
 
-            if fitness_personal_bests > fitness_local_best:
-                local_best, fitness_local_best = personal_best, fitness_personal_bests
+            if fitness_personal_best > fitness_local_best:
+                local_best, fitness_local_best = personal_best, fitness_personal_best
 
             vi = [(consts['w'] * vi[j] +
                    consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
