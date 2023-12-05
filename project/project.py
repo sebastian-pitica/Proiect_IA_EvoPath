@@ -15,6 +15,7 @@
 #  28.11.2023  Sebastian Pitica      Added get_values func, added draw_maze func, added draw_smooth_path func, added run_simulation func, added create_simulation_window func, specific future todos and added maze specific constants
 #  29.11.2023  Matei Rares           Normalize angles, modify bug in gen_adaptable_pathway()
 #  30.11.2023  Matei Rares           Get values from input window and verify them, animate particles as circles with a number inside, function to draw all particles in maze, draw particles sequentially, added stop animation button
+#  4.12.2023   Matei Rares           Modified animations
 #  **************************************************************************/
 
 #########################################################################################################
@@ -99,9 +100,11 @@ def gen_adaptable_pathway(individual):
     last_tried_dir = []
     coming_direction = None
     for i in range(len(individual)):
+        row, col = coord
         gen = individual[i]
         direction = det_direction(gen)
-        row, col = coord
+        #direction=check_intersection_paths(row, col, coming_direction, pathway ,gen)
+
         if direction in last_tried_dir:
             temp_dir = get_rand_dir_different_from(last_tried_dir)
             if temp_dir != UNBLOCK:
@@ -111,16 +114,17 @@ def gen_adaptable_pathway(individual):
 
         if direction == RIGHT:
             if col + 1 == MAZE_SIZE:
+                #print("S-a iesit la index"+ str(i))
+                col+=1
+
                 break
             if maze[row][col + 1] == PATH:
                 col += 1
                 last_tried_dir = [LEFT]
                 coming_direction = LEFT
                 individual[i - (len(last_tried_dir))] = det_angle_based_on(direction)
-
             elif maze[row][col + 1] == WALL:
                 last_tried_dir.append(RIGHT)
-
         elif direction == LEFT:
             if col - 1 >= 0:
                 if maze[row][col - 1] == PATH:
@@ -132,7 +136,6 @@ def gen_adaptable_pathway(individual):
                     last_tried_dir.append(LEFT)
             else:
                 last_tried_dir.append(LEFT)
-
         elif direction == UP:
             if maze[row - 1][col] == PATH:
                 row -= 1
@@ -156,7 +159,74 @@ def gen_adaptable_pathway(individual):
         coord = (row, col)
         pathway.append(coord)
 
+    if pathway[-1] ==MAZE_END:
+        print("S-a ajuns la final")
+
     return pathway, individual
+
+def two_or_three_paths_present(tile1,tile2,tile3):
+    print(tile1+tile2+tile3 + "  |  " + str(PATH+PATH))
+    if (str(PATH+PATH) in str(tile1+tile2+tile3))  or (str(PATH+PATH) in str(tile1+tile3+tile2)):
+        print("intersectie")
+        return True
+    else:
+        return False
+
+def check_intersection_paths(row,col,last_direction,current_path,possible_angle):#primesc urmatoarea coordonata
+    upper_path,upper_row,upper_col = maze[row-1][col], row-1, col
+    lower_path,lower_row,lower_col = maze[row+1][col], row+1, col
+    left_path,left_row,left_col = maze[row][col-1], row, col-1
+    right_path,right_row,right_col = maze[row][col+1], row, col+1
+
+    if last_direction == UP and two_or_three_paths_present(lower_path,left_path,right_path):
+        if (lower_row,lower_col) in current_path:
+            if (left_row,left_col) in current_path:
+                if (right_row,right_col) in current_path:
+                    return gen_rand_angle()
+                else:
+                    return RIGHT
+            else:
+                return LEFT
+        else:
+            return UP
+    elif last_direction == DOWN and two_or_three_paths_present(upper_path,left_path,right_path):
+        if (upper_row,upper_col) in current_path:
+            if (left_row,left_col) in current_path:
+                if (right_row,right_col) in current_path:
+                    return gen_rand_angle()
+                else:
+                    return RIGHT
+            else:
+                return LEFT
+        else:
+            return DOWN
+        pass
+    elif last_direction == LEFT and two_or_three_paths_present(lower_path,upper_path,right_path):
+        if (lower_row,lower_col) in current_path:
+            if (upper_row,upper_col) in current_path:
+                if (right_row,right_col) in current_path:
+                    return gen_rand_angle()
+                else:
+                    return RIGHT
+            else:
+                return UP
+        else:
+            return DOWN
+        pass
+    elif last_direction == RIGHT and two_or_three_paths_present(lower_path,left_path,upper_path):
+        if (lower_row,lower_col) in current_path:
+            if (left_row,left_col) in current_path:
+                if (upper_row,upper_col) in current_path:
+                    return gen_rand_angle()
+                else:
+                    return UP
+            else:
+                return LEFT
+        else:
+            return DOWN
+        pass
+    else:
+        return det_direction(possible_angle)
 
 
 #########################################################################################################
@@ -180,7 +250,7 @@ EAST = 2
 SOUTH = 3
 WEST = 4
 NULL_DIRECTION = 0
-PATH = ' '
+PATH = '+'
 WALL = '#'
 VISITED = 1
 STEP = 1
@@ -228,7 +298,7 @@ def adaptable_fitness_function(individual: list) -> (float, list):
     return fitness_value, individual
 
 
-def particle_swarm_optimization_gbest(population: list, generations: int, consts: dict, canvas) -> list:
+def particle_swarm_optimization_gbest(population: list, generations: int, consts: dict, canvas, generation_label) -> list:
     population_length = len(population)
     nr_genes = len(population[0])
     speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
@@ -239,8 +309,6 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
     fitness_global_best, global_best = adaptable_fitness_function(global_best)
 
     for generation in range(0, generations):
-        print("Generatia"+ str(generation))
-
         for i in range(0, population_length):
             xi: list = population[i]
             vi: list = speeds[i]
@@ -270,23 +338,26 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
             personal_bests[i] = personal_best
             fitness_personal_bests[i] = fitness_personal_best
 
-            ###############desenez o particula
+            # # ###############desenez o particula
             path,_=gen_adaptable_pathway(population[i])
             #print(f"Nr gene individ {i} :  "+str(len(path))+"  |  gene: "+str(path))
-            draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, i)
-            ###############
 
-        ############## gen toate particule
+            draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, i)
+            draw_generation_nr(canvas,generation_label,generation+1)
+            # # ###############
+
+        ############ gen toate particule
         # paths = []
         # for i in range(0, population_length):
         #     path, _ = gen_adaptable_pathway(population[i])
         #     paths.append(path)
         #
-        # draw_all(30, paths, canvas)
-        ##############
+        # draw_all(DRAW_SIZE_FACTOR, paths, canvas)
+        # draw_generation_nr(canvas,generation_label,generation+1)
 
-        # gen pathway for population[i] sau xi
-        # cu ce s a generat pornesti animatie cu nr particula i
+        #############
+
+
 
     return global_best
 
@@ -359,7 +430,7 @@ def particle_swarm_optimization(population_length: int, nr_genes: int, generatio
 
 
 def gen_maze_wilson(size_factor: int) -> (np.ndarray, int, tuple, tuple):
-    global maze, MAZE_START, MAZE_END
+    global maze, MAZE_START, MAZE_END,MAZE_SIZE
     matrix = np.zeros(shape=(size_factor, size_factor))
     min_coord = 0
     max_coord = size_factor - 1
@@ -432,8 +503,9 @@ def gen_maze_wilson(size_factor: int) -> (np.ndarray, int, tuple, tuple):
     maze[finish_i_coord, finish_j_coord] = PATH
     MAZE_START = (start_i_coord, star_j_coord)
     MAZE_END = (finish_i_coord, finish_j_coord)
+    MAZE_SIZE=2*size_factor+1
 
-    return 2 * size_factor + 1
+    #return 2 * size_factor + 1
 
 
 consts = {'w': 0, 'c1': 0, 'r1': 0, 'r2': 0, 'c2': 0}
@@ -447,7 +519,7 @@ MAZE_COLOR="blue"
 
 def get_values(entry_w, entry_c1, entry_r1, entry_r2, entry_c2, entry_gene_length, entry_population_length,
                entry_generations, entry_maze_size_factor, animation_speed_factor):
-    global consts, GENES, INDIVIDUALS, GENERATIONS, ANIMATION_SPEED, MAZE_SIZE
+    global consts, GENES, INDIVIDUALS, GENERATIONS, ANIMATION_SPEED, SIZE_FACTOR
 
     consts['w'] = 11 if entry_w == '' else int(entry_w)
     consts['c1'] = 11 if entry_c1 == '' else int(entry_c1)
@@ -457,7 +529,7 @@ def get_values(entry_w, entry_c1, entry_r1, entry_r2, entry_c2, entry_gene_lengt
     GENES = 11 if entry_gene_length == '' else int(entry_gene_length)
     INDIVIDUALS = 11 if entry_population_length == '' else int(entry_population_length)
     GENERATIONS = 11 if entry_generations == '' else int(entry_generations)
-    MAZE_SIZE = 11 if entry_maze_size_factor == '' else int(entry_maze_size_factor)
+    SIZE_FACTOR = 11 if entry_maze_size_factor == '' else int(entry_maze_size_factor)
     ANIMATION_SPEED = 11 if animation_speed_factor == '' else int(animation_speed_factor)
 
 
@@ -497,22 +569,27 @@ def draw_smooth_path(canvas, path_coords, scale_factor, particle_number):
                 x = x1 + step * x_step
                 y = y1 + step * y_step
 
-                canvas.delete("smooth_point")
+                canvas.delete(f"smooth_point{particle_number}")
 
                 canvas.create_oval(x * scale_factor, y * scale_factor,
                                    (x + 1) * scale_factor, (y + 1) * scale_factor,
-                                   fill=PARTICLE_COLOR, outline="black", tags="smooth_point"
+                                   fill=PARTICLE_COLOR, outline="black", tags=f"smooth_point{particle_number}"
                                    )
 
                 canvas.create_text((x + 0.5) * scale_factor, (y + 0.5) * scale_factor,
-                                   text=str(particle_number), fill='white', tags="smooth_point")
+                                   text=str(particle_number), fill='white', tags=f"smooth_point{particle_number}")
                 canvas.update()
-                # canvas.after(1)
+                #canvas.after(1)
             canvas.after(0, animate, index + 1)
         else:
-            canvas.delete("smooth_point")
+            canvas.delete(f"smooth_point{particle_number}")
 
     animate(0)
+
+
+
+
+
 
 
 def draw_all(scale_factor, paths, canvas):
@@ -549,11 +626,16 @@ def stop_animation():
 
 
 DRAW_SIZE_FACTOR = 30
-
 SWITCH_BEST=None;
+SIZE_FACTOR=0;
+
+def draw_generation_nr(canvas,label,generation_nr):
+    label.config(text=f"Generation: {generation_nr}")
+    canvas.update()
+
 
 def run_simulation():
-    global MAZE_SIZE, maze
+    global  maze,SIZE_FACTOR
     simulation_window = tk.Tk()
     simulation_window.title("Simulation")
     simulation_window.resizable(True, True)
@@ -568,6 +650,8 @@ def run_simulation():
     button = tk.Button(simulation_window, text="Stop Animation!", command=stop_animation)
     button.place(relx=1.0, rely=0.0,
                  anchor='ne')  # relx=0.0 means the left edge, rely=0.0 means the top edge, anchor='nw' means northwest
+    generation_label=tk.Label(simulation_window, text="Generation: ")
+    generation_label.place(relx=0.0, rely=0.0,anchor='nw')
 
     ##########################################################################################
     population = []
@@ -575,10 +659,15 @@ def run_simulation():
     for i in range(INDIVIDUALS):
         population.append(gen_individual(GENES))
 
-    gen_maze_wilson(MAZE_SIZE)
+    gen_maze_wilson(SIZE_FACTOR)
     draw_maze(maze, canvas, len(maze) * DRAW_SIZE_FACTOR, len(maze) * DRAW_SIZE_FACTOR)
-    particle_swarm_optimization_gbest(population, GENERATIONS, consts, canvas)
+    particle_swarm_optimization_gbest(population, GENERATIONS, consts, canvas,generation_label)
 
+    # for pop in population:
+    #     print("Nr gene"+ str(len(pop)))
+    #     path, _ = gen_adaptable_pathway(pop)
+    #     print("nr path" + str(len(path)))
+    #     draw_path(canvas, path, DRAW_SIZE_FACTOR, i)
 
     ##########################################################################################
 
@@ -670,25 +759,26 @@ def create_simulation_window():
     animation_speed.grid(row=9, column=1)
     animation_speed.insert(9, "900")
 
-    checkbox_var1 = tk.IntVar()
-    checkbox_var2 = tk.IntVar()
-
-    def toggle_checkboxes():
-        if checkbox_var1.get():
-            checkbox2.config(state=tk.DISABLED)
-        else:
-            checkbox2.config(state=tk.NORMAL)
-
-        if checkbox_var2.get():
-            checkbox1.config(state=tk.DISABLED)
-        else:
-            checkbox1.config(state=tk.NORMAL)
-
-    checkbox1 = tk.Checkbutton(input_window, text="Local best", variable=checkbox_var1, command=toggle_checkboxes)
-    checkbox1.grid(row=11, column=0)
-
-    checkbox2 = tk.Checkbutton(input_window, text="Global best", variable=checkbox_var2, command=toggle_checkboxes)
-    checkbox2.grid(row=11, column=1)
+    # todo uncommnt when implementing gbset or lbest
+    # checkbox_var1 = tk.IntVar()
+    # checkbox_var2 = tk.IntVar()
+    #
+    # def toggle_checkboxes():
+    #     if checkbox_var1.get():
+    #         checkbox2.config(state=tk.DISABLED)
+    #     else:
+    #         checkbox2.config(state=tk.NORMAL)
+    #
+    #     if checkbox_var2.get():
+    #         checkbox1.config(state=tk.DISABLED)
+    #     else:
+    #         checkbox1.config(state=tk.NORMAL)
+    #
+    # checkbox1 = tk.Checkbutton(input_window, text="Local best", variable=checkbox_var1, command=toggle_checkboxes)
+    # checkbox1.grid(row=11, column=0)
+    #
+    # checkbox2 = tk.Checkbutton(input_window, text="Global best", variable=checkbox_var2, command=toggle_checkboxes)
+    # checkbox2.grid(row=11, column=1)
 
     submit_button = ttk.Button(input_window, text="Run simulation", command=lambda: (
         get_values(entry_w.get(), entry_c1.get(), entry_r1.get(), entry_r2.get(), entry_c2.get(),
