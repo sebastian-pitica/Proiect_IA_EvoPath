@@ -635,12 +635,14 @@ def draw_generation_nr(canvas,label,generation_nr):
 
 
 def run_simulation():
-    global  maze,SIZE_FACTOR
+    global  maze,SIZE_FACTOR,DRAW_SIZE_FACTOR,MAZE_SIZE
+    gen_maze_wilson(SIZE_FACTOR)
+
     simulation_window = tk.Tk()
     simulation_window.title("Simulation")
     simulation_window.resizable(True, True)
-    fixed_canvas_width = 740
-    fixed_canvas_height = 740
+    fixed_canvas_width = MAZE_SIZE*DRAW_SIZE_FACTOR
+    fixed_canvas_height = MAZE_SIZE*DRAW_SIZE_FACTOR
     offset_x = 400;
     offset_y = 100;
     simulation_window.geometry(f"{fixed_canvas_width}x{fixed_canvas_height}+{offset_x}+{offset_y}")
@@ -659,8 +661,7 @@ def run_simulation():
     for i in range(INDIVIDUALS):
         population.append(gen_individual(GENES))
 
-    gen_maze_wilson(SIZE_FACTOR)
-    draw_maze(maze, canvas, len(maze) * DRAW_SIZE_FACTOR, len(maze) * DRAW_SIZE_FACTOR)
+    draw_maze(maze, canvas, MAZE_SIZE * DRAW_SIZE_FACTOR, MAZE_SIZE * DRAW_SIZE_FACTOR)
     particle_swarm_optimization_gbest(population, GENERATIONS, consts, canvas,generation_label)
 
     # for pop in population:
