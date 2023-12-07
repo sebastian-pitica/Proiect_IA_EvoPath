@@ -9,12 +9,13 @@
 #  Date        Author                Reason
 #  24.11.2023  Matei Rares           Basic structure and functions
 #  24.11.2023  Sebastian Pitica      Basic structure and Wilson algorithm for maze gen (improved version from https://github.com/antigones/pymazes/blob/main/wilson.py)
-#  27.11.2023  Pitica Sebastian      Updated gen_pathway, todos and imports, rename vars
+#  27.11.2023  Sebastian Pitica     Updated gen_pathway, todos and imports, rename vars
 #  27.11.2023  Matei Rares           Updated name variables and gen_adaptable_pathway(), deleted comments
 #  27.11.2023  Sebastian Pitica      Added particle swarm optimization algorithm lb and gb, added fitness func, added manhattan distance func, added eliminate duplicate neighbors func
 #  28.11.2023  Sebastian Pitica      Added get_values func, added draw_maze func, added draw_smooth_path func, added run_simulation func, added create_simulation_window func, specific future todos and added maze specific constants
 #  29.11.2023  Matei Rares           Normalize angles, modify bug in gen_adaptable_pathway()
 #  30.11.2023  Matei Rares           Get values from input window and verify them, animate particles as circles with a number inside, function to draw all particles in maze, draw particles sequentially, added stop animation button
+#  30.11.2023  Sebastian Pitica      Patched pso functions
 #  4.12.2023   Matei Rares           Modified animations
 #  **************************************************************************/
 
