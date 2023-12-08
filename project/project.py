@@ -17,6 +17,7 @@
 #  30.11.2023  Matei Rares           Get values from input window and verify them, animate particles as circles with a number inside, function to draw all particles in maze, draw particles sequentially, added stop animation button
 #  30.11.2023  Sebastian Pitica      Patched pso functions
 #  4.12.2023   Matei Rares           Modified animations
+#  9.12.2023   Matei Rares           Option to chose and return gbest or lbest
 #  **************************************************************************/
 
 #########################################################################################################
@@ -155,11 +156,10 @@ def gen_adaptable_pathway(individual):
         coord = (row, col)
         pathway.append(coord)
 
-    if pathway[-1] == MAZE_END:
+    if pathway[-1] == MAZE_END:  # TODO asta de pus la sfarsitul generatiei
         print("S-a ajuns la final")
 
     return pathway, individual
-
 
 
 #########################################################################################################
@@ -172,7 +172,7 @@ def gen_adaptable_pathway(individual):
 import numpy as np
 import random as rd
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 MAZE_START = (None, None)
 MAZE_END = (None, None)
@@ -221,9 +221,10 @@ def adaptable_fitness_function(individual: list) -> (float, list):
 
     # Fitness calculation formula:
     fitness_value = (
-            ((1.0 / unique_steps_count) * MAZE_SIZE * 100 if had_finished else 0)  # Unique steps component
-            - (remaining_distance * 10)  # Remaining distance component
-            - (duplicate_steps_penalty * 5)  # Duplicate steps component
+            ((1.0 / unique_steps_count) * MAZE_SIZE * 1000 if had_finished else 0)  # Unique steps component
+            + (200 * MAZE_SIZE if had_finished else 0)  # Finished maze component
+            - (remaining_distance * 20)  # Remaining distance component
+            - (duplicate_steps_penalty * 10)  # Duplicate steps component
     )
     # The fitness value will be higher for solutions that take fewer unique steps, have less remaining distance,
     # and fewer duplicate steps.
@@ -261,10 +262,10 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
             vi = [normalize_angle(consts['w'] * vi[j] +
                                   consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
                                   consts['c2'] * consts['r2'] * (global_best[j] - xi[j]))
-                  for j in range(0, nr_genes)]  # normalizare peste  vi
+                  for j in range(0, nr_genes)]
 
             xi = xi + vi
-            xi = [normalize_angle(ind) for ind in xi]  # normalizre peste xi
+            xi = [normalize_angle(ind) for ind in xi]
 
             ###########################################################################
             population[i] = xi
@@ -272,27 +273,15 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
             personal_bests[i] = personal_best
             fitness_personal_bests[i] = fitness_personal_best
 
-            path, _ = gen_adaptable_pathway(population[i])
-
-            draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, i)
-            draw_generation_nr(canvas, generation_label, generation + 1)
-            # # ###############
-
-        ############ gen toate particule
-        # paths = []
-        # for i in range(0, population_length):
-        #     path, _ = gen_adaptable_pathway(population[i])
-        #     paths.append(path)
-        #
-        # draw_all(DRAW_SIZE_FACTOR, paths, canvas)
-        # draw_generation_nr(canvas,generation_label,generation+1)
-
-        #############
+        path, _ = gen_adaptable_pathway(global_best)
+        draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "G")
+        draw_generation_nr(canvas, generation_label, generation + 1)
 
     return global_best
 
 
-def particle_swarm_optimization_lbest(population: list, generations: int, consts: dict) -> list:
+def particle_swarm_optimization_lbest(population: list, generations: int, consts: dict, canvas,
+                                      generation_label) -> list:
     population_length = len(population)
     nr_genes = len(population[0])
 
@@ -305,7 +294,7 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
     personal_bests: list[list] = [population[i] for i in range(0, population_length)]
     fitness_personal_bests: list = [0 for _ in range(population_length)]
 
-    for _ in range(0, generations):
+    for generation in range(0, generations):
         for i in range(0, population_length):
             xi: list = population[i]
             vi: list = speeds[i]
@@ -323,15 +312,13 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
             if fitness_personal_best > fitness_local_best:
                 local_best, fitness_local_best = personal_best, fitness_personal_best
 
-            vi = [(consts['w'] * vi[j] +
-                   consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
-                   consts['c2'] * consts['r2'] * (local_best[j] - xi[j]))
+            vi = [normalize_angle((consts['w'] * vi[j] +
+                                   consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
+                                   consts['c2'] * consts['r2'] * (local_best[j] - xi[j])))
                   for j in range(0, nr_genes)]
-            # (todo) apelare normalizare peste  vi
-            vi = normalize_angle(vi)
-            xi = normalize_angle(xi + vi)
 
-            # (todo) apelare normalizare peste xi
+            xi = xi + vi
+            xi = [normalize_angle(ind) for ind in xi]
 
             ###########################################################################
             population[i] = xi
@@ -340,20 +327,28 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
             fitness_personal_bests[i] = fitness_personal_best
             local_bests[i % 2] = local_best
             fitness_local_bests[i % 2] = fitness_local_best
+        path, _ = gen_adaptable_pathway(local_best)
+        draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "L")
+        draw_generation_nr(canvas, generation_label, generation + 1)
 
     return local_bests
 
 
+GLOBAL = "GLOBAL"
+LOCAL = "LOCAL"
+
+
 def particle_swarm_optimization(population_length: int, nr_genes: int, generations: int,
-                                consts: dict):
+                                consts: dict,canvas,generation_label):
     population = gen_population(nr_genes, population_length)
     if SWITCH_BEST == None:
         print("Trebuie selectat gbest sau lbest")
-    elif SWITCH_BEST == False:
-        lbest = particle_swarm_optimization_lbest(population, generations, consts)
-    else:
-        gbest = particle_swarm_optimization_gbest(population, generations, consts)
-    # todo return gbest and lbest
+    elif SWITCH_BEST == LOCAL:
+        lbest = particle_swarm_optimization_lbest(population, generations, consts,canvas,generation_label)
+    elif SWITCH_BEST == GLOBAL:
+        gbest = particle_swarm_optimization_gbest(population, generations, consts,canvas,generation_label)
+
+    # todo return gbest and lbest si afisare la final momentan in consola
 
 
 def gen_maze_wilson(size_factor: int) -> (np.ndarray, int, tuple, tuple):
@@ -433,7 +428,7 @@ def gen_maze_wilson(size_factor: int) -> (np.ndarray, int, tuple, tuple):
     MAZE_SIZE = 2 * size_factor + 1
 
 
-consts = {'w': 0, 'c1': 0, 'r1': 0, 'r2': 0, 'c2': 0}
+consts = {'w': 0.0, 'c1': 0.0, 'r1': 0.0, 'r2': 0.0, 'c2': 0.0}
 GENES = 0
 INDIVIDUALS = 0
 GENERATIONS = 0
@@ -443,20 +438,22 @@ PARTICLE_COLOR = "red"
 MAZE_COLOR = "blue"
 
 
-def get_values(entry_w, entry_c1, entry_r1, entry_r2, entry_c2, entry_gene_length, entry_population_length,
+def get_values(entry_w, entry_c1, entry_c2, entry_gene_length, entry_population_length,
                entry_generations, entry_maze_size_factor, animation_speed_factor):
     global consts, GENES, INDIVIDUALS, GENERATIONS, ANIMATION_SPEED, SIZE_FACTOR
 
-    consts['w'] = 11 if entry_w == '' else int(entry_w)
-    consts['c1'] = 11 if entry_c1 == '' else int(entry_c1)
-    consts['r1'] = 11 if entry_r1 == '' else int(entry_r1)
-    consts['r2'] = 11 if entry_r2 == '' else int(entry_r2)
-    consts['c2'] = 11 if entry_c2 == '' else int(entry_c2)
-    GENES = 11 if entry_gene_length == '' else int(entry_gene_length)
-    INDIVIDUALS = 11 if entry_population_length == '' else int(entry_population_length)
-    GENERATIONS = 11 if entry_generations == '' else int(entry_generations)
-    SIZE_FACTOR = 11 if entry_maze_size_factor == '' else int(entry_maze_size_factor)
-    ANIMATION_SPEED = 11 if animation_speed_factor == '' else int(animation_speed_factor)
+    consts['w'] = 10 if entry_w == '' else float(entry_w)
+    consts['c1'] = 10 if entry_c1 == '' else float(entry_c1)
+    consts['c2'] = 10 if entry_c2 == '' else float(entry_c2)
+    ####### random(0,1)
+    consts['r1'] = random.random()
+    consts['r2'] = random.random()
+    #######
+    GENES = 10 if entry_gene_length == '' else int(entry_gene_length)
+    INDIVIDUALS = 10 if entry_population_length == '' else int(entry_population_length)
+    GENERATIONS = 10 if entry_generations == '' else int(entry_generations)
+    SIZE_FACTOR = 10 if entry_maze_size_factor == '' else int(entry_maze_size_factor)
+    ANIMATION_SPEED = 900 if animation_speed_factor == '' else int(animation_speed_factor)
 
 
 def draw_maze(maze, canvas, width, height):
@@ -477,11 +474,11 @@ def draw_maze(maze, canvas, width, height):
 def draw_smooth_path(canvas, path_coords, scale_factor, particle_number):
     global ANIMATION_SPEED
     path_coords.append(path_coords[-1])
+
     def animate(index):
         if index < len(path_coords) - 1:
             y1, x1 = path_coords[index]
             y2, x2 = path_coords[index + 1]
-
 
             speed_factor = abs(1000 - ANIMATION_SPEED)
             steps = speed_factor if (x1, y1) != (x2, y2) else 1
@@ -537,13 +534,11 @@ def draw_all(scale_factor, paths, canvas):
     update_animation(0)
 
 
-def stop_animation():
-    print("Setez valoare ca sa iasa din bucla animatiei")
 
 
 DRAW_SIZE_FACTOR = 30
-SWITCH_BEST = None;
-SIZE_FACTOR = 0;
+SWITCH_BEST = None
+SIZE_FACTOR = 0
 
 
 def draw_generation_nr(canvas, label, generation_nr):
@@ -552,129 +547,135 @@ def draw_generation_nr(canvas, label, generation_nr):
 
 
 def run_simulation():
-    global maze, SIZE_FACTOR, DRAW_SIZE_FACTOR, MAZE_SIZE
-    gen_maze_wilson(SIZE_FACTOR)
+    global maze, SIZE_FACTOR, DRAW_SIZE_FACTOR, MAZE_SIZE,consts
 
     simulation_window = tk.Tk()
-    simulation_window.title("Simulation")
-    simulation_window.resizable(True, True)
-    fixed_canvas_width = MAZE_SIZE * DRAW_SIZE_FACTOR
-    fixed_canvas_height = MAZE_SIZE * DRAW_SIZE_FACTOR
-    offset_x = 400;
-    offset_y = 100;
-    simulation_window.geometry(f"{fixed_canvas_width}x{fixed_canvas_height}+{offset_x}+{offset_y}")
+    if SWITCH_BEST != None:
+        simulation_window.title("Simulation")
+        simulation_window.resizable(True, True)
+        gen_maze_wilson(SIZE_FACTOR)
 
-    canvas = tk.Canvas(simulation_window, width=fixed_canvas_width, height=fixed_canvas_height)
-    canvas.pack()
-    button = tk.Button(simulation_window, text="Stop Animation!", command=stop_animation)
-    button.place(relx=1.0, rely=0.0,
-                 anchor='ne')
-    generation_label = tk.Label(simulation_window, text="Generation: ")
-    generation_label.place(relx=0.0, rely=0.0, anchor='nw')
+        fixed_canvas_width = MAZE_SIZE * DRAW_SIZE_FACTOR
 
-    ##########################################################################################
-    population = []
+        fixed_canvas_height = MAZE_SIZE * DRAW_SIZE_FACTOR
+        offset_x = 400;
+        offset_y = 100;
+        simulation_window.geometry(f"{fixed_canvas_width}x{fixed_canvas_height}+{offset_x}+{offset_y}")
 
-    for i in range(INDIVIDUALS):
-        population.append(gen_individual(GENES))
+        canvas = tk.Canvas(simulation_window, width=fixed_canvas_width, height=fixed_canvas_height)
+        canvas.pack()
 
-    draw_maze(maze, canvas, MAZE_SIZE * DRAW_SIZE_FACTOR, MAZE_SIZE * DRAW_SIZE_FACTOR)
-    particle_swarm_optimization_gbest(population, GENERATIONS, consts, canvas, generation_label)
+        generation_label = tk.Label(simulation_window, text="Generation: ")
+        generation_label.place(relx=0.0, rely=0.0, anchor='nw')
 
-    simulation_window.mainloop()
+        ##########################################################################################
+        # population = []
+        #
+        # for i in range(INDIVIDUALS):
+        #     population.append(gen_individual(GENES))
+
+        draw_maze(maze, canvas, MAZE_SIZE * DRAW_SIZE_FACTOR, MAZE_SIZE * DRAW_SIZE_FACTOR)
+
+        particle_swarm_optimization(INDIVIDUALS,GENES,GENERATIONS,consts,canvas,generation_label)
+
+        #particle_swarm_optimization_gbest(population, GENERATIONS, consts, canvas, generation_label)
+
+        simulation_window.mainloop()
+
+    # todo de vazut cum se aleg parametrii corect(c1 si c2 intreb gpt , r1 si r2 a zis profu ca sunt random), poate gpt are o parere
+    # todo adaugat posibilitatea de a vizualiza doar bestu sau lbestu
+    # todo de sters butonu pentru animatie
+    #
+
+
+def get_best(global_var, local_var):
+    global SWITCH_BEST
+    if global_var.get() == True and local_var.get() == True:
+        messagebox.showinfo("Information", "Nu e bine ales")
+        SWITCH_BEST =None
+    elif global_var.get() == False and local_var.get() == False:
+        messagebox.showinfo("Information", "Trebuie ales ceva")
+        SWITCH_BEST=None
+    elif global_var.get() == True and local_var.get() == False:
+        SWITCH_BEST = GLOBAL
+    elif global_var.get() == False and local_var.get() == True:
+        SWITCH_BEST = LOCAL
 
 
 def create_simulation_window():
     input_window = tk.Tk()
 
     fixed_input_window_width = 300
-    fixed_input_window_height = 300
+    fixed_input_window_height = 250
     input_window.title("Input values for simulation")
     input_window.resizable(False, False)
     offset_x = 100;
     offset_y = 50;
     input_window.geometry(f"{fixed_input_window_width}x{fixed_input_window_height}+{offset_x}+{offset_y}")
-
-    # Create and place input labels and entry widgets
+    ##val testate w=10, c1=3, c2=10
     tk.Label(input_window, text="w:").grid(row=0, column=0)
-
-    entry_w = tk.Entry(input_window)
+    ##########  0,4< exploatare, >0,9 explorare
+    entry_w = tk.Entry(input_window)  ## inertia
     entry_w.grid(row=0, column=1)
-    entry_w.insert(0, "11")
+    entry_w.insert(0, "1")
+    ##########
 
+    ##########  val mari= exploatare, val mici=explorare
     tk.Label(input_window, text="c1:").grid(row=1, column=0)
-    entry_c1 = tk.Entry(input_window)
+    entry_c1 = tk.Entry(input_window)  ##cognitive
     entry_c1.grid(row=1, column=1)
-    entry_c1.insert(1, "11")
+    entry_c1.insert(1, "1.5")
 
-    tk.Label(input_window, text="r1:").grid(row=2, column=0)
-    entry_r1 = tk.Entry(input_window)
-    entry_r1.grid(row=2, column=1)
-    entry_r1.insert(2, "11")
+    tk.Label(input_window, text="c2:").grid(row=2, column=0)
+    entry_c2 = tk.Entry(input_window)  ##social
+    entry_c2.grid(row=2, column=1)
+    entry_c2.insert(2, "2")
+    ##########
 
-    tk.Label(input_window, text="r2:").grid(row=3, column=0)
-    entry_r2 = tk.Entry(input_window)
-    entry_r2.grid(row=3, column=1)
-    entry_r2.insert(3, "11")
-
-    tk.Label(input_window, text="c2:").grid(row=4, column=0)
-    entry_c2 = tk.Entry(input_window)
-    entry_c2.grid(row=4, column=1)
-    entry_c2.insert(4, "11")
-
-    tk.Label(input_window, text="Individual Gene Length:").grid(row=5, column=0)
+    tk.Label(input_window, text="Individual Gene Length:").grid(row=3, column=0)
     entry_gene_length = tk.Entry(input_window)
-    entry_gene_length.grid(row=5, column=1)
-    entry_gene_length.insert(5, "20")
+    entry_gene_length.grid(row=3, column=1)
+    entry_gene_length.insert(3, "20")
 
-    tk.Label(input_window, text="Population Length:").grid(row=6, column=0)
+    tk.Label(input_window, text="Population Length:").grid(row=4, column=0)
     entry_population_length = tk.Entry(input_window)
-    entry_population_length.grid(row=6, column=1)
-    entry_population_length.insert(6, "5")
+    entry_population_length.grid(row=4, column=1)
+    entry_population_length.insert(4, "10")
 
-    tk.Label(input_window, text="Generations:").grid(row=7, column=0)
+    tk.Label(input_window, text="Generations:").grid(row=5, column=0)
     entry_generations = tk.Entry(input_window)
-    entry_generations.grid(row=7, column=1)
-    entry_generations.insert(7, "11")
+    entry_generations.grid(row=5, column=1)
+    entry_generations.insert(5, "10")
 
-    tk.Label(input_window, text="Maze Size Factor:").grid(row=8, column=0)
+    tk.Label(input_window, text="Maze Size Factor:").grid(row=6, column=0)
     entry_maze_size_factor = tk.Entry(input_window)
-    entry_maze_size_factor.grid(row=8, column=1)
-    entry_maze_size_factor.insert(8, "11")
+    entry_maze_size_factor.grid(row=6, column=1)
+    entry_maze_size_factor.insert(6, "6")
 
-    tk.Label(input_window, text="Animation speed:").grid(row=9, column=0)
+    tk.Label(input_window, text="Animation speed:").grid(row=7, column=0)
     animation_speed = tk.Entry(input_window)
-    animation_speed.grid(row=9, column=1)
-    animation_speed.insert(9, "900")
+    animation_speed.grid(row=7, column=1)
+    animation_speed.insert(7, "930")
 
-    # todo uncommnt when implementing gbset or lbest
-    # checkbox_var1 = tk.IntVar()
-    # checkbox_var2 = tk.IntVar()
-    #
-    # def toggle_checkboxes():
-    #     if checkbox_var1.get():
-    #         checkbox2.config(state=tk.DISABLED)
-    #     else:
-    #         checkbox2.config(state=tk.NORMAL)
-    #
-    #     if checkbox_var2.get():
-    #         checkbox1.config(state=tk.DISABLED)
-    #     else:
-    #         checkbox1.config(state=tk.NORMAL)
-    #
-    # checkbox1 = tk.Checkbutton(input_window, text="Local best", variable=checkbox_var1, command=toggle_checkboxes)
-    # checkbox1.grid(row=11, column=0)
-    #
-    # checkbox2 = tk.Checkbutton(input_window, text="Global best", variable=checkbox_var2, command=toggle_checkboxes)
-    # checkbox2.grid(row=11, column=1)
+    global_checkbox_var = tk.BooleanVar()
+    global_checkbox_var.set(True)
+    local_checkbox_var = tk.BooleanVar()
+    local_checkbox_var.set(False)
+
+    checkbox1 = tk.Checkbutton(input_window, text="Global best", variable=global_checkbox_var)
+    checkbox1.grid(row=8, column=0)
+
+    checkbox2 = tk.Checkbutton(input_window, text="Local best", variable=local_checkbox_var)
+    checkbox2.grid(row=8, column=1)
 
     submit_button = ttk.Button(input_window, text="Run simulation", command=lambda: (
-        get_values(entry_w.get(), entry_c1.get(), entry_r1.get(), entry_r2.get(), entry_c2.get(),
+        get_values(entry_w.get(), entry_c1.get(), entry_c2.get(),
                    entry_gene_length.get(),
                    entry_population_length.get(), entry_generations.get(), entry_maze_size_factor.get(),
-                   animation_speed.get())
-        , run_simulation()))
-    submit_button.grid(row=12, column=0, columnspan=2, pady=10)
+                   animation_speed.get()),
+        get_best(global_checkbox_var, local_checkbox_var),
+        run_simulation()))
+    submit_button.grid(row=9, column=0, columnspan=2, pady=10)
 
     input_window.mainloop()
 
