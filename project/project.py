@@ -52,14 +52,14 @@ def gen_rand_angle():
 
 def gen_individual(nr_genes):
     individual = []
-    for i in range(0, nr_genes):
+    for _ in range(nr_genes):
         individual.append(gen_rand_angle())
     return individual
 
 
 def gen_population(nr_genes, population_length):
     population = []
-    for i in range(0, population_length):
+    for _ in range(population_length):
         population.append(gen_individual(nr_genes))
     return population
 
@@ -155,9 +155,6 @@ def gen_adaptable_pathway(individual):
 
         coord = (row, col)
         pathway.append(coord)
-
-    if pathway[-1] == MAZE_END:  # TODO asta de pus la sfarsitul generatiei
-        print("S-a ajuns la final")
 
     return pathway, individual
 
@@ -276,7 +273,8 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
         path, _ = gen_adaptable_pathway(global_best)
         draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "G")
         draw_generation_nr(canvas, generation_label, generation + 1)
-
+        if path[-1] == MAZE_END:
+            print("S-a ajuns la final")
     return global_best
 
 
@@ -330,7 +328,8 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
         path, _ = gen_adaptable_pathway(local_best)
         draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "L")
         draw_generation_nr(canvas, generation_label, generation + 1)
-
+        if path[-1] == MAZE_END:
+            print("S-a ajuns la final")
     return local_bests
 
 
@@ -339,16 +338,14 @@ LOCAL = "LOCAL"
 
 
 def particle_swarm_optimization(population_length: int, nr_genes: int, generations: int,
-                                consts: dict,canvas,generation_label):
+                                consts: dict, canvas, generation_label):
     population = gen_population(nr_genes, population_length)
-    if SWITCH_BEST == None:
-        print("Trebuie selectat gbest sau lbest")
-    elif SWITCH_BEST == LOCAL:
-        lbest = particle_swarm_optimization_lbest(population, generations, consts,canvas,generation_label)
+    result = None
+    if SWITCH_BEST == LOCAL:
+        result = particle_swarm_optimization_lbest(population, generations, consts, canvas, generation_label)
     elif SWITCH_BEST == GLOBAL:
-        gbest = particle_swarm_optimization_gbest(population, generations, consts,canvas,generation_label)
-
-    # todo return gbest and lbest si afisare la final momentan in consola
+        result = particle_swarm_optimization_gbest(population, generations, consts, canvas, generation_label)
+    return result
 
 
 def gen_maze_wilson(size_factor: int) -> (np.ndarray, int, tuple, tuple):
@@ -433,14 +430,26 @@ GENES = 0
 INDIVIDUALS = 0
 GENERATIONS = 0
 ANIMATION_SPEED = 0
-input_window = 0
 PARTICLE_COLOR = "red"
 MAZE_COLOR = "blue"
 
 
-def get_values(entry_w, entry_c1, entry_c2, entry_gene_length, entry_population_length,
-               entry_generations, entry_maze_size_factor, animation_speed_factor):
-    global consts, GENES, INDIVIDUALS, GENERATIONS, ANIMATION_SPEED, SIZE_FACTOR
+def get_values_and_start(entry_w, entry_c1, entry_c2, entry_gene_length, entry_population_length,
+                         entry_generations, entry_maze_size_factor, animation_speed_factor, global_var, local_var):
+    global consts, GENES, INDIVIDUALS, GENERATIONS, ANIMATION_SPEED, SIZE_FACTOR, SWITCH_BEST
+
+    if global_var == True and local_var == True:
+        messagebox.showinfo("Information", "Alege un singur best")
+        SWITCH_BEST = None
+        return
+    elif global_var == False and local_var == False:
+        messagebox.showinfo("Information", "Alege gbest sau lbest")
+        SWITCH_BEST = None
+        return
+    elif global_var == True and local_var == False:
+        SWITCH_BEST = GLOBAL
+    elif global_var == False and local_var == True:
+        SWITCH_BEST = LOCAL
 
     consts['w'] = 10 if entry_w == '' else float(entry_w)
     consts['c1'] = 10 if entry_c1 == '' else float(entry_c1)
@@ -453,7 +462,10 @@ def get_values(entry_w, entry_c1, entry_c2, entry_gene_length, entry_population_
     INDIVIDUALS = 10 if entry_population_length == '' else int(entry_population_length)
     GENERATIONS = 10 if entry_generations == '' else int(entry_generations)
     SIZE_FACTOR = 10 if entry_maze_size_factor == '' else int(entry_maze_size_factor)
-    ANIMATION_SPEED = 900 if animation_speed_factor == '' else int(animation_speed_factor)
+    ANIMATION_SPEED = 900 if (animation_speed_factor == '' or animation_speed_factor == 1000) else int(
+        animation_speed_factor)
+
+    run_simulation()
 
 
 def draw_maze(maze, canvas, width, height):
@@ -534,8 +546,6 @@ def draw_all(scale_factor, paths, canvas):
     update_animation(0)
 
 
-
-
 DRAW_SIZE_FACTOR = 30
 SWITCH_BEST = None
 SIZE_FACTOR = 0
@@ -547,19 +557,20 @@ def draw_generation_nr(canvas, label, generation_nr):
 
 
 def run_simulation():
-    global maze, SIZE_FACTOR, DRAW_SIZE_FACTOR, MAZE_SIZE,consts
+    global maze, SIZE_FACTOR, DRAW_SIZE_FACTOR, MAZE_SIZE, consts
 
-    simulation_window = tk.Tk()
-    if SWITCH_BEST != None:
+    if SWITCH_BEST is not None:
+        simulation_window = tk.Tk()
         simulation_window.title("Simulation")
         simulation_window.resizable(True, True)
         gen_maze_wilson(SIZE_FACTOR)
-
         fixed_canvas_width = MAZE_SIZE * DRAW_SIZE_FACTOR
-
         fixed_canvas_height = MAZE_SIZE * DRAW_SIZE_FACTOR
-        offset_x = 400;
-        offset_y = 100;
+
+        center_x = int(simulation_window.winfo_screenwidth()/2)
+        center_y = int(simulation_window.winfo_screenheight()/2)
+        offset_x = center_x - int(fixed_canvas_width/2);
+        offset_y = center_y - int(fixed_canvas_height/2);
         simulation_window.geometry(f"{fixed_canvas_width}x{fixed_canvas_height}+{offset_x}+{offset_y}")
 
         canvas = tk.Canvas(simulation_window, width=fixed_canvas_width, height=fixed_canvas_height)
@@ -569,37 +580,12 @@ def run_simulation():
         generation_label.place(relx=0.0, rely=0.0, anchor='nw')
 
         ##########################################################################################
-        # population = []
-        #
-        # for i in range(INDIVIDUALS):
-        #     population.append(gen_individual(GENES))
 
         draw_maze(maze, canvas, MAZE_SIZE * DRAW_SIZE_FACTOR, MAZE_SIZE * DRAW_SIZE_FACTOR)
-
-        particle_swarm_optimization(INDIVIDUALS,GENES,GENERATIONS,consts,canvas,generation_label)
-
-        #particle_swarm_optimization_gbest(population, GENERATIONS, consts, canvas, generation_label)
+        best = particle_swarm_optimization(INDIVIDUALS, GENES, GENERATIONS, consts, canvas, generation_label)
+        print("Local best: ", best) if SWITCH_BEST == LOCAL else print("Global best: ", best)
 
         simulation_window.mainloop()
-
-    # todo de vazut cum se aleg parametrii corect(c1 si c2 intreb gpt , r1 si r2 a zis profu ca sunt random), poate gpt are o parere
-    # todo adaugat posibilitatea de a vizualiza doar bestu sau lbestu
-    # todo de sters butonu pentru animatie
-    #
-
-
-def get_best(global_var, local_var):
-    global SWITCH_BEST
-    if global_var.get() == True and local_var.get() == True:
-        messagebox.showinfo("Information", "Nu e bine ales")
-        SWITCH_BEST =None
-    elif global_var.get() == False and local_var.get() == False:
-        messagebox.showinfo("Information", "Trebuie ales ceva")
-        SWITCH_BEST=None
-    elif global_var.get() == True and local_var.get() == False:
-        SWITCH_BEST = GLOBAL
-    elif global_var.get() == False and local_var.get() == True:
-        SWITCH_BEST = LOCAL
 
 
 def create_simulation_window():
@@ -610,7 +596,11 @@ def create_simulation_window():
     input_window.title("Input values for simulation")
     input_window.resizable(False, False)
     offset_x = 100;
-    offset_y = 50;
+    offset_y = 350;
+
+    # center_y = int(fixed_input_window_height.winfo_screenheight() / 2)
+    # offset_y = center_y - int(fixed_input_window_height / 2);
+
     input_window.geometry(f"{fixed_input_window_width}x{fixed_input_window_height}+{offset_x}+{offset_y}")
     ##val testate w=10, c1=3, c2=10
     tk.Label(input_window, text="w:").grid(row=0, column=0)
@@ -669,12 +659,10 @@ def create_simulation_window():
     checkbox2.grid(row=8, column=1)
 
     submit_button = ttk.Button(input_window, text="Run simulation", command=lambda: (
-        get_values(entry_w.get(), entry_c1.get(), entry_c2.get(),
-                   entry_gene_length.get(),
-                   entry_population_length.get(), entry_generations.get(), entry_maze_size_factor.get(),
-                   animation_speed.get()),
-        get_best(global_checkbox_var, local_checkbox_var),
-        run_simulation()))
+        get_values_and_start(entry_w.get(), entry_c1.get(), entry_c2.get(),
+                             entry_gene_length.get(),
+                             entry_population_length.get(), entry_generations.get(), entry_maze_size_factor.get(),
+                             animation_speed.get(), global_checkbox_var.get(), local_checkbox_var.get())))
     submit_button.grid(row=9, column=0, columnspan=2, pady=10)
 
     input_window.mainloop()
