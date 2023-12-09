@@ -218,7 +218,7 @@ def adaptable_fitness_function(individual: list) -> (float, list):
     # Fitness calculation formula:
     fitness_value = (
             ((1.0 / unique_steps_count) * MAZE_SIZE * 1000 if had_finished else 0)  # Unique steps component
-            + (200 * MAZE_SIZE if had_finished else 0)  # Finished maze component
+            + (200 * MAZE_SIZE if had_finished else 0)  # Finished maze component extra
             - (remaining_distance * 20)  # Remaining distance component
             - (duplicate_steps_penalty * 10)  # Duplicate steps component
     )
@@ -281,7 +281,7 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
     nr_genes = len(population[0])
 
     local_bests = [population[0], population[0]]
-    fitness_local_bests = [[],[]]
+    fitness_local_bests = [[], []]
     fitness_local_bests[0], local_bests[0] = adaptable_fitness_function(local_bests[0])
     fitness_local_bests[1], local_bests[1] = adaptable_fitness_function(local_bests[1])
 
@@ -325,8 +325,6 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
         path, _ = gen_adaptable_pathway(local_best)
         draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "L")
         draw_generation_nr(canvas, generation_label, generation + 1)
-        if path[-1] == MAZE_END:
-            print("S-a ajuns la final")
     return local_bests
 
 
@@ -565,10 +563,10 @@ def run_simulation():
         fixed_canvas_width = MAZE_SIZE * DRAW_SIZE_FACTOR
         fixed_canvas_height = MAZE_SIZE * DRAW_SIZE_FACTOR
 
-        center_x = int(simulation_window.winfo_screenwidth()/2)
-        center_y = int(simulation_window.winfo_screenheight()/2)
-        offset_x = center_x - int(fixed_canvas_width/2);
-        offset_y = center_y - int(fixed_canvas_height/2);
+        center_x = int(simulation_window.winfo_screenwidth() / 2)
+        center_y = int(simulation_window.winfo_screenheight() / 2)
+        offset_x = center_x - int(fixed_canvas_width / 2);
+        offset_y = center_y - int(fixed_canvas_height / 2);
         simulation_window.geometry(f"{fixed_canvas_width}x{fixed_canvas_height}+{offset_x}+{offset_y}")
 
         canvas = tk.Canvas(simulation_window, width=fixed_canvas_width, height=fixed_canvas_height)
