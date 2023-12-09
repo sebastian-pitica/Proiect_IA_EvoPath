@@ -284,7 +284,7 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
     nr_genes = len(population[0])
 
     local_bests = [population[0], population[0]]
-    fitness_local_bests = list()
+    fitness_local_bests = [[],[]]
     fitness_local_bests[0], local_bests[0] = adaptable_fitness_function(local_bests[0])
     fitness_local_bests[1], local_bests[1] = adaptable_fitness_function(local_bests[1])
 
