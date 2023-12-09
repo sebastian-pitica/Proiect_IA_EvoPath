@@ -2,7 +2,6 @@
 #
 #  File:        project.py
 #  Copyright:   (c) 2023 EvoPath Team
-#  Description:
 #  Designed by: Sebastian Pitica
 #
 #  Module-History:
@@ -273,8 +272,6 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
         path, _ = gen_adaptable_pathway(global_best)
         draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "G")
         draw_generation_nr(canvas, generation_label, generation + 1)
-        if path[-1] == MAZE_END:
-            print("S-a ajuns la final")
     return global_best
 
 
@@ -358,6 +355,7 @@ def gen_maze_wilson(size_factor: int) -> (np.ndarray, int, tuple, tuple):
 
     i_coord = rd.randrange(size_factor)
     j_coord = rd.randrange(size_factor)
+
     matrix[i_coord, j_coord] = 1
     visited = [[i_coord, j_coord]]
     visited_from = [NULL_DIRECTION]
@@ -595,32 +593,25 @@ def create_simulation_window():
     fixed_input_window_height = 250
     input_window.title("Input values for simulation")
     input_window.resizable(False, False)
-    offset_x = 100;
-    offset_y = 350;
-
-    # center_y = int(fixed_input_window_height.winfo_screenheight() / 2)
-    # offset_y = center_y - int(fixed_input_window_height / 2);
+    offset_x = 100
+    offset_y = 350
 
     input_window.geometry(f"{fixed_input_window_width}x{fixed_input_window_height}+{offset_x}+{offset_y}")
-    ##val testate w=10, c1=3, c2=10
     tk.Label(input_window, text="w:").grid(row=0, column=0)
-    ##########  0,4< exploatare, >0,9 explorare
-    entry_w = tk.Entry(input_window)  ## inertia
+
+    entry_w = tk.Entry(input_window)
     entry_w.grid(row=0, column=1)
     entry_w.insert(0, "1")
-    ##########
 
-    ##########  val mari= exploatare, val mici=explorare
     tk.Label(input_window, text="c1:").grid(row=1, column=0)
-    entry_c1 = tk.Entry(input_window)  ##cognitive
+    entry_c1 = tk.Entry(input_window)
     entry_c1.grid(row=1, column=1)
     entry_c1.insert(1, "1.5")
 
     tk.Label(input_window, text="c2:").grid(row=2, column=0)
-    entry_c2 = tk.Entry(input_window)  ##social
+    entry_c2 = tk.Entry(input_window)
     entry_c2.grid(row=2, column=1)
     entry_c2.insert(2, "2")
-    ##########
 
     tk.Label(input_window, text="Individual Gene Length:").grid(row=3, column=0)
     entry_gene_length = tk.Entry(input_window)
