@@ -99,18 +99,21 @@ def gen_adaptable_pathway(individual):
     pathway = []
     coord = MAZE_START
     pathway.append(coord)
+
     last_tried_dir = []
     coming_direction = None
     for i in range(len(individual)):
         row, col = coord
         gen = individual[i]
         direction = det_direction(gen)
+
         if direction in last_tried_dir:
             temp_dir = get_rand_dir_different_from(last_tried_dir)
             if temp_dir != UNBLOCK:
                 direction = temp_dir
             else:
                 direction = coming_direction
+
         if direction == RIGHT:
             if col + 1 == MAZE_SIZE:
                 col += 1
@@ -150,8 +153,10 @@ def gen_adaptable_pathway(individual):
 
             elif maze[row + 1][col] == WALL:
                 last_tried_dir.append(DOWN)
+
         coord = (row, col)
         pathway.append(coord)
+
     return pathway, individual
 
 
@@ -575,7 +580,6 @@ def run_simulation():
         center_y = int(simulation_window.winfo_screenheight() / 2)
         offset_x = center_x - int(fixed_canvas_width / 2);
         offset_y = center_y - int(fixed_canvas_height / 2);
-
         simulation_window.geometry(f"{fixed_canvas_width}x{fixed_canvas_height}+{offset_x}+{offset_y}")
 
         canvas = tk.Canvas(simulation_window, width=fixed_canvas_width, height=fixed_canvas_height)
