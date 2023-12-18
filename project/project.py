@@ -28,6 +28,7 @@
 #########################################################################################################
 #########################################################################################################
 import random
+import sys
 
 RIGHT = "right"
 LEFT = "left"
@@ -246,7 +247,7 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
         nr_genes = len(population[0])
         speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
         personal_bests: list[list] = [population[i] for i in range(0, population_length)]
-        fitness_personal_bests: list = [0 for _ in range(population_length)]
+        fitness_personal_bests: list = [sys.maxsize*(-1) for _ in range(population_length)]
 
         global_best: list = population[0]
         fitness_global_best, global_best = adaptable_fitness_function(global_best)
@@ -300,7 +301,7 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
 
         speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
         personal_bests: list[list] = [population[i] for i in range(0, population_length)]
-        fitness_personal_bests: list = [0 for _ in range(population_length)]
+        fitness_personal_bests: list = [sys.maxsize*(-1) for _ in range(population_length)]
 
         for generation in range(0, generations):
             for i in range(0, population_length):
