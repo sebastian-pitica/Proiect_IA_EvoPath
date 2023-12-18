@@ -18,6 +18,8 @@
 #  4.12.2023   Matei Rares           Modified animations
 #  9.12.2023   Matei Rares           Option to chose and return gbest or lbest
 #  9.12.2023   Sebastian Pitica      Adapted fitness function to reward more for finishing the maze
+#  18.12.2023  Sebastian Pitica      Adapted fitness function for test using, patched pso functions
+#
 #  **************************************************************************/
 
 #########################################################################################################
@@ -25,7 +27,6 @@
 ############################################## Matei ####################################################
 #########################################################################################################
 #########################################################################################################
-
 import random
 
 RIGHT = "right"
@@ -203,11 +204,19 @@ def eliminate_duplicate_neighbors(input_list: list) -> list:
     return result
 
 
+def had_finished(route: list) -> bool:
+    return route[-1] == MAZE_END
+
+
+def maze_size():
+    return MAZE_SIZE
+
+
 def adaptable_fitness_function(individual: list) -> (float, list):
     route, individual = gen_adaptable_pathway(individual)
     total_steps_count = len(route)
     unique_steps_count = len(eliminate_duplicate_neighbors(route))
-    had_finished = (route[-1] == MAZE_END)
+    finished = had_finished(route)
     remaining_distance = manhattan_distance_to_finish(route[-1])
     duplicate_steps_penalty = total_steps_count - unique_steps_count
 
@@ -218,8 +227,8 @@ def adaptable_fitness_function(individual: list) -> (float, list):
 
     # Fitness calculation formula:
     fitness_value = (
-            ((1.0 / unique_steps_count) * MAZE_SIZE * 1000 if had_finished else 0)  # Unique steps component
-            + (200 * MAZE_SIZE if had_finished else 0)  # Finished maze component extra
+            ((1.0 / unique_steps_count) * maze_size() * 1000 if finished else 0)  # Unique steps component
+            + (200 * maze_size() if finished else 0)  # Finished maze component extra
             - (remaining_distance * 20)  # Remaining distance component
             - (duplicate_steps_penalty * 10)  # Duplicate steps component
     )
@@ -231,101 +240,104 @@ def adaptable_fitness_function(individual: list) -> (float, list):
 
 def particle_swarm_optimization_gbest(population: list, generations: int, consts: dict, canvas,
                                       generation_label) -> list:
+    global_best: list = []
     population_length = len(population)
-    nr_genes = len(population[0])
-    speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
-    personal_bests: list[list] = [population[i] for i in range(0, population_length)]
-    fitness_personal_bests: list = [0 for _ in range(population_length)]
+    if population_length != 0:
+        nr_genes = len(population[0])
+        speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
+        personal_bests: list[list] = [population[i] for i in range(0, population_length)]
+        fitness_personal_bests: list = [0 for _ in range(population_length)]
 
-    global_best: list = population[0]
-    fitness_global_best, global_best = adaptable_fitness_function(global_best)
+        global_best: list = population[0]
+        fitness_global_best, global_best = adaptable_fitness_function(global_best)
 
-    for generation in range(0, generations):
-        for i in range(0, population_length):
-            xi: list = population[i]
-            vi: list = speeds[i]
-            personal_best: list = personal_bests[i]
-            fitness_personal_best: int = fitness_personal_bests[i]
-            ###########################################################################
+        for generation in range(0, generations):
+            for i in range(0, population_length):
+                xi: list = population[i]
+                vi: list = speeds[i]
+                personal_best: list = personal_bests[i]
+                fitness_personal_best: int = fitness_personal_bests[i]
+                ###########################################################################
 
-            fitness, xi = adaptable_fitness_function(xi)
+                fitness, xi = adaptable_fitness_function(xi)
 
-            if fitness > fitness_personal_best:
-                personal_best, fitness_personal_best = xi, fitness
+                if fitness > fitness_personal_best:
+                    personal_best, fitness_personal_best = xi, fitness
 
-            if fitness_personal_best > fitness_global_best:
-                global_best, fitness_global_best = personal_best, fitness_personal_best
+                if fitness_personal_best > fitness_global_best:
+                    global_best, fitness_global_best = personal_best, fitness_personal_best
 
-            vi = [normalize_angle(consts['w'] * vi[j] +
-                                  consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
-                                  consts['c2'] * consts['r2'] * (global_best[j] - xi[j]))
-                  for j in range(0, nr_genes)]
+                vi = [normalize_angle(consts['w'] * vi[j] +
+                                      consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
+                                      consts['c2'] * consts['r2'] * (global_best[j] - xi[j]))
+                      for j in range(0, nr_genes)]
 
-            xi = xi + vi
-            xi = [normalize_angle(ind) for ind in xi]
+                xi = xi + vi
+                xi = [normalize_angle(ind) for ind in xi]
 
-            ###########################################################################
-            population[i] = xi
-            speeds[i] = vi
-            personal_bests[i] = personal_best
-            fitness_personal_bests[i] = fitness_personal_best
+                ###########################################################################
+                population[i] = xi
+                speeds[i] = vi
+                personal_bests[i] = personal_best
+                fitness_personal_bests[i] = fitness_personal_best
 
-        path, _ = gen_adaptable_pathway(global_best)
-        draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "G")
-        draw_generation_nr(canvas, generation_label, generation + 1)
+            path, _ = gen_adaptable_pathway(global_best)
+            draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "G")
+            draw_generation_nr(canvas, generation_label, generation + 1)
     return global_best
 
 
 def particle_swarm_optimization_lbest(population: list, generations: int, consts: dict, canvas,
                                       generation_label) -> list:
+    local_bests = [[], []]
     population_length = len(population)
-    nr_genes = len(population[0])
+    if population_length != 0:
+        nr_genes = len(population[0])
+        local_bests = [population[0], population[0]]
+        fitness_local_bests = [[], []]
+        fitness_local_bests[0], local_bests[0] = adaptable_fitness_function(local_bests[0])
+        fitness_local_bests[1], local_bests[1] = adaptable_fitness_function(local_bests[1])
 
-    local_bests = [population[0], population[0]]
-    fitness_local_bests = [[], []]
-    fitness_local_bests[0], local_bests[0] = adaptable_fitness_function(local_bests[0])
-    fitness_local_bests[1], local_bests[1] = adaptable_fitness_function(local_bests[1])
+        speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
+        personal_bests: list[list] = [population[i] for i in range(0, population_length)]
+        fitness_personal_bests: list = [0 for _ in range(population_length)]
 
-    speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
-    personal_bests: list[list] = [population[i] for i in range(0, population_length)]
-    fitness_personal_bests: list = [0 for _ in range(population_length)]
+        for generation in range(0, generations):
+            for i in range(0, population_length):
+                xi: list = population[i]
+                vi: list = speeds[i]
+                personal_best: list = personal_bests[i]
+                fitness_personal_best: int = fitness_personal_bests[i]
+                local_best = local_bests[i % 2]
+                fitness_local_best = fitness_local_bests[i % 2]
+                ###########################################################################
 
-    for generation in range(0, generations):
-        for i in range(0, population_length):
-            xi: list = population[i]
-            vi: list = speeds[i]
-            personal_best: list = personal_bests[i]
-            fitness_personal_best: int = fitness_personal_bests[i]
-            local_best = local_bests[i % 2]
-            fitness_local_best = fitness_local_bests[i % 2]
-            ###########################################################################
+                fitness, xi = adaptable_fitness_function(xi)
 
-            fitness, xi = adaptable_fitness_function(xi)
+                if fitness > fitness_personal_best:
+                    personal_best, fitness_personal_best = xi, fitness
 
-            if fitness > fitness_personal_best:
-                personal_best, fitness_personal_best = xi, fitness
+                if fitness_personal_best > fitness_local_best:
+                    local_best, fitness_local_best = personal_best, fitness_personal_best
 
-            if fitness_personal_best > fitness_local_best:
-                local_best, fitness_local_best = personal_best, fitness_personal_best
+                vi = [normalize_angle((consts['w'] * vi[j] +
+                                       consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
+                                       consts['c2'] * consts['r2'] * (local_best[j] - xi[j])))
+                      for j in range(0, nr_genes)]
 
-            vi = [normalize_angle((consts['w'] * vi[j] +
-                                   consts['c1'] * consts['r1'] * (personal_best[j] - xi[j]) +
-                                   consts['c2'] * consts['r2'] * (local_best[j] - xi[j])))
-                  for j in range(0, nr_genes)]
+                xi = xi + vi
+                xi = [normalize_angle(ind) for ind in xi]
 
-            xi = xi + vi
-            xi = [normalize_angle(ind) for ind in xi]
-
-            ###########################################################################
-            population[i] = xi
-            speeds[i] = vi
-            personal_bests[i] = personal_best
-            fitness_personal_bests[i] = fitness_personal_best
-            local_bests[i % 2] = local_best
-            fitness_local_bests[i % 2] = fitness_local_best
-        path, _ = gen_adaptable_pathway(local_best)
-        draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "L")
-        draw_generation_nr(canvas, generation_label, generation + 1)
+                ###########################################################################
+                population[i] = xi
+                speeds[i] = vi
+                personal_bests[i] = personal_best
+                fitness_personal_bests[i] = fitness_personal_best
+                local_bests[i % 2] = local_best
+                fitness_local_bests[i % 2] = fitness_local_best
+            path, _ = gen_adaptable_pathway(local_best)
+            draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "L")
+            draw_generation_nr(canvas, generation_label, generation + 1)
     return local_bests
 
 
