@@ -388,3 +388,79 @@ class EliminateDuplicateNeighborsTests(TestCase):
 ############################################## Matei ####################################################
 #########################################################################################################
 #########################################################################################################
+
+
+class TestMyModule(TestCase):
+
+    #verific daca valorile genelor sunt intre 0 si 360 si daca are nr de gene corecte
+    def test_gen_individual(self):
+        nr_genes=20
+        ind = project.gen_individual(nr_genes)
+        result =True
+        i=0
+        for i in range(len(ind)):
+            if ind[i] < 0 and ind[i] > 360:
+                result = False
+        if i !=nr_genes -1:
+            result= False
+
+        self.assertEqual(result, True)
+
+    #verific daca populatia are nr de indivizi corect si daca fiecare individ are nr de gene corect
+    def test_gen_population(self):
+        nr_genes=20
+        nr_indiv=10
+        pop = project.gen_population(nr_genes, nr_indiv)
+        result =True
+        i=0
+        for i in range(len(pop)):
+            if len(pop[i]) != nr_genes:
+                result = False
+        if i !=nr_indiv -1:
+            result= False
+        self.assertEqual(result, True)
+    #verific daca directia e determinata corect
+    def test_det_direction(self):
+        ind=[5,93,170,250]
+        result=[]
+        for i in range(len(ind)):
+            result.append(project.det_direction(ind[i]))
+        self.assertEqual(result, ["right","up","left","down"])
+
+    #verific daca unhgiurile generate se incadreaza in in intervalele corecte
+    def test_det_angle_based_on_direction(self):
+        ind=["right","up","left","down"]
+        list=[]
+        result=True
+        for i in range(len(ind)):
+            list.append(project.det_angle_based_on(ind[i]))
+        if (list[0] >0 and list[0] <45 or list[0] >315 and list[0] <360) != True:
+            result = False
+        if list[1] <45 or list[1] >135:
+            result = False
+        if list[2] <135 or list[2] >225:
+            result = False
+        if list[3] <225 or list[3] >315:
+            result = False
+        self.assertEqual(result, True)
+
+    #verific daca nr de elemente din path e corect, daca coordonatele sunt mai mari decat -1, mai mici decat marimea maze-ului, si daca coordonatele din path indica zone fara perete
+    def test_adaptable_pathway(self):
+        result=True
+        project.gen_maze_wilson(23)
+        nr_genes=20;
+        ind=project.gen_individual(nr_genes)
+        path,_=project.gen_adaptable_pathway(ind)
+
+        if len(path) != nr_genes +1:
+            result=False
+        for i in path:
+            x,y=i
+            if x > project.MAZE_SIZE or y > project.MAZE_SIZE or x < 0 or y < 0 or project.maze[x][y] == project.WALL:
+                result=False
+
+        self.assertEqual(result, True)
+
+import unittest
+if __name__ == '__main__':
+    unittest.main()
