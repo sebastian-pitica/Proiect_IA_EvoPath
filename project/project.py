@@ -19,7 +19,8 @@
 #  9.12.2023   Matei Rares           Option to chose and return gbest or lbest
 #  9.12.2023   Sebastian Pitica      Adapted fitness function to reward more for finishing the maze
 #  18.12.2023  Sebastian Pitica      Adapted fitness function for test using, patched pso functions
-#
+#  20.12.2023  Matei Rares           Draw particle function
+
 #  **************************************************************************/
 
 #########################################################################################################
@@ -79,13 +80,14 @@ def det_direction(angle):
 
 def det_angle_based_on(direction):
     if direction == RIGHT:
-        return 0
+        return random.uniform(0, LIMIT_SUP_RIGHT_ANGLE) if random.choice([True, False]) else random.uniform(
+            LIMIT_INF_RIGHT_ANGLE, 360)
     elif direction == LEFT:
-        return 180
+        return random.uniform(LIMIT_SUP_LEFT_ANGLE, LIMIT_INF_LEFT_ANGLE)
     elif direction == UP:
-        return 90
+        return random.uniform(LIMIT_SUP_UP_ANGLE, LIMIT_INF_UP_ANGLE)
     elif direction == DOWN:
-        return 270
+        return random.uniform(LIMIT_SUP_DOWN_ANGLE, LIMIT_INF_DOWN_ANGLE)
 
 
 def get_rand_dir_different_from(last_tried_dir):
@@ -247,7 +249,7 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
         nr_genes = len(population[0])
         speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
         personal_bests: list[list] = [population[i] for i in range(0, population_length)]
-        fitness_personal_bests: list = [sys.maxsize*(-1) for _ in range(population_length)]
+        fitness_personal_bests: list = [sys.maxsize * (-1) for _ in range(population_length)]
 
         global_best: list = population[0]
         fitness_global_best, global_best = adaptable_fitness_function(global_best)
@@ -282,9 +284,7 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
                 personal_bests[i] = personal_best
                 fitness_personal_bests[i] = fitness_personal_best
 
-            path, _ = gen_adaptable_pathway(global_best)
-            draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "G")
-            draw_generation_nr(canvas, generation_label, generation + 1)
+            draw_particle(global_best, canvas, "G", generation_label, generation + 1)
     return global_best
 
 
@@ -301,7 +301,7 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
 
         speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
         personal_bests: list[list] = [population[i] for i in range(0, population_length)]
-        fitness_personal_bests: list = [sys.maxsize*(-1) for _ in range(population_length)]
+        fitness_personal_bests: list = [sys.maxsize * (-1) for _ in range(population_length)]
 
         for generation in range(0, generations):
             for i in range(0, population_length):
@@ -336,14 +336,19 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
                 fitness_personal_bests[i] = fitness_personal_best
                 local_bests[i % 2] = local_best
                 fitness_local_bests[i % 2] = fitness_local_best
-            path, _ = gen_adaptable_pathway(local_best)
-            draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, "L")
-            draw_generation_nr(canvas, generation_label, generation + 1)
+            draw_particle(local_best, canvas, "L", generation_label, generation + 1)
     return local_bests
 
 
 GLOBAL = "GLOBAL"
 LOCAL = "LOCAL"
+
+
+def draw_particle(best, canvas, particle_letter, generation_label, generation_nr):
+    global DRAW_SIZE_FACTOR
+    path, _ = gen_adaptable_pathway(best)
+    draw_smooth_path(canvas, path, DRAW_SIZE_FACTOR, particle_letter)
+    draw_generation_nr(canvas, generation_label, generation_nr)
 
 
 def particle_swarm_optimization(population_length: int, nr_genes: int, generations: int,
@@ -472,6 +477,7 @@ def get_values_and_start(entry_w, entry_c1, entry_c2, entry_gene_length, entry_p
     INDIVIDUALS = 10 if entry_population_length == '' else int(entry_population_length)
     GENERATIONS = 10 if entry_generations == '' else int(entry_generations)
     SIZE_FACTOR = 10 if entry_maze_size_factor == '' else int(entry_maze_size_factor)
+    SIZE_FACTOR= 3 if SIZE_FACTOR < 3 else SIZE_FACTOR
     ANIMATION_SPEED = 900 if (animation_speed_factor == '' or animation_speed_factor == 1000) else int(
         animation_speed_factor)
 
@@ -526,34 +532,6 @@ def draw_smooth_path(canvas, path_coords, scale_factor, particle_number):
             canvas.delete(f"smooth_point{particle_number}")
 
     animate(0)
-
-
-def draw_all(scale_factor, paths, canvas):
-    def update_animation(index):
-        for i, pat in enumerate(paths):
-            if index <= len(pat) - 1:
-                y1, x1 = pat[index]
-                x = x1
-                y = y1
-
-                canvas.delete(f"robot_{i}")
-                canvas.create_oval(x * scale_factor, y * scale_factor,
-                                   (x + 1) * scale_factor, (y + 1) * scale_factor,
-                                   fill=PARTICLE_COLOR, outline="black", tags=f"robot_{i}")
-
-                canvas.create_text((x + 0.5) * scale_factor, (y + 0.5) * scale_factor,
-                                   text=str(i), fill='white', tags=f"robot_{i}")
-                canvas.update()
-                speed_factor = abs(1000 - ANIMATION_SPEED)
-
-                canvas.after(speed_factor)
-            else:
-                canvas.delete(f"robot_{i}")
-                return
-
-        canvas.after(0, update_animation, index + 1)
-
-    update_animation(0)
 
 
 DRAW_SIZE_FACTOR = 30
