@@ -19,6 +19,7 @@
 #  9.12.2023   Matei Rares           Option to chose and return gbest or lbest
 #  9.12.2023   Sebastian Pitica      Adapted fitness function to reward more for finishing the maze
 #  18.12.2023  Sebastian Pitica      Adapted fitness function for test using, patched pso functions
+#  26.12.2023  Sebastian Pitica      Small adapt for testing
 #
 #  **************************************************************************/
 
@@ -188,8 +189,12 @@ VISITED = 1
 STEP = 1
 
 
+def maze_end():
+    return MAZE_END
+
+
 def manhattan_distance_to_finish(start: tuple) -> int:
-    return abs(start[0] - MAZE_END[0]) + abs(start[1] - MAZE_END[1])
+    return abs(start[0] - maze_end()[0]) + abs(start[1] - maze_end()[1])
 
 
 def eliminate_duplicate_neighbors(input_list: list) -> list:
@@ -206,7 +211,7 @@ def eliminate_duplicate_neighbors(input_list: list) -> list:
 
 
 def had_finished(route: list) -> bool:
-    return route[-1] == MAZE_END
+    return route[-1] == maze_end()
 
 
 def maze_size():
@@ -247,7 +252,7 @@ def particle_swarm_optimization_gbest(population: list, generations: int, consts
         nr_genes = len(population[0])
         speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
         personal_bests: list[list] = [population[i] for i in range(0, population_length)]
-        fitness_personal_bests: list = [sys.maxsize*(-1) for _ in range(population_length)]
+        fitness_personal_bests: list = [sys.maxsize * (-1) for _ in range(population_length)]
 
         global_best: list = population[0]
         fitness_global_best, global_best = adaptable_fitness_function(global_best)
@@ -301,7 +306,7 @@ def particle_swarm_optimization_lbest(population: list, generations: int, consts
 
         speeds: list[list] = [gen_individual(len(population[0])) for _ in range(population_length)]
         personal_bests: list[list] = [population[i] for i in range(0, population_length)]
-        fitness_personal_bests: list = [sys.maxsize*(-1) for _ in range(population_length)]
+        fitness_personal_bests: list = [sys.maxsize * (-1) for _ in range(population_length)]
 
         for generation in range(0, generations):
             for i in range(0, population_length):
