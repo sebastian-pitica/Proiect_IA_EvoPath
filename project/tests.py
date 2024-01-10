@@ -390,7 +390,7 @@ class EliminateDuplicateNeighborsTests(TestCase):
 #########################################################################################################
 
 
-class TestMyModule(TestCase):
+class TestAdaptablePathway(TestCase):
 
     #verific daca valorile genelor sunt intre 0 si 360 si daca are nr de gene corecte
     def test_gen_individual(self):
